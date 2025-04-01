@@ -22,3 +22,5 @@ target_link_libraries(audio_engine PRIVATE
 target_include_directories(audio_engine PRIVATE
     ${CMAKE_SOURCE_DIR}/extern/JUCE/modules
 )
+
+set_target_properties(audio_engine PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}" LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bindings)
