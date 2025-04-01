@@ -20,16 +20,17 @@ engine.start()
 
 # Play notes with fall-off
 synth1.setFrequency(440.0)  # A4
-synth1.setFallOff(0.99)     # Slow fall-off
+synth1.setFallOff(200.0)   # 0.2 seconds fall-off
 synth1.noteOn()
 synth2.setFrequency(660.0)  # E5
-synth2.setFallOff(0.95)     # Faster fall-off
+synth2.setFallOff(1000.0)   # 1 second fall-off
 synth2.noteOn()
 time.sleep(2)
 synth1.noteOff()
 time.sleep(2)
 
 synth2.noteOff()
+time.sleep(2)
 
 # Stop audio playback
 engine.stop()

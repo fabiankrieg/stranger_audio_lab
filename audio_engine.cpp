@@ -15,14 +15,14 @@
 
 class SimpleSynth {
 public:
-    SimpleSynth() : frequency(440.0f), phase(0.0f), amplitude(0.0f), fallOff(0.99f), isOn(false) {}
+    SimpleSynth() : frequency(440.0f), phase(0.0f), amplitude(0.0f), fallOffTimeMs(1000.0f), isOn(false) {}
 
     void setFrequency(float newFreq) {
         frequency.store(newFreq, std::memory_order_relaxed);
     }
 
-    void setFallOff(float newFallOff) {
-        fallOff.store(newFallOff, std::memory_order_relaxed);
+    void setFallOff(float newFallOffTimeMs) {
+        fallOffTimeMs.store(newFallOffTimeMs, std::memory_order_relaxed);
     }
 
     void noteOn() {
@@ -37,7 +37,7 @@ public:
     void generateBlock(float* buffer, unsigned int nFrames) {
         float phaseStep = (2.0f * M_PI * frequency.load(std::memory_order_relaxed)) / SAMPLE_RATE;
         float currentAmplitude = amplitude.load(std::memory_order_relaxed);
-        float fallOffRate = fallOff.load(std::memory_order_relaxed);
+        float fallOffRate = 1.0f / (fallOffTimeMs.load(std::memory_order_relaxed) / 1000.0f * SAMPLE_RATE); // Linear decay per sample
         bool synthIsOn = isOn.load(std::memory_order_relaxed);
 
         for (unsigned int i = 0; i < nFrames; i++) {
@@ -47,8 +47,8 @@ public:
 
             // Gradually reduce amplitude only if the synth is "off"
             if (!synthIsOn && currentAmplitude > 0.0f) {
-                currentAmplitude *= fallOffRate;
-                if (currentAmplitude < 0.001f) currentAmplitude = 0.0f; // Stop completely if very low
+                currentAmplitude -= fallOffRate;
+                if (currentAmplitude < 0.0f) currentAmplitude = 0.0f; // Stop completely if it goes below zero
             }
         }
 
@@ -58,7 +58,7 @@ public:
 private:
     std::atomic<float> frequency;
     std::atomic<float> amplitude; // Current amplitude of the synth
-    std::atomic<float> fallOff;   // Fall-off rate after noteOff
+    std::atomic<float> fallOffTimeMs; // Fall-off time in milliseconds
     std::atomic<bool> isOn;       // Tracks whether the synth is "on" or "off"
     float phase;
 };
