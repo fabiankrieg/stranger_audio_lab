@@ -8,28 +8,28 @@ import audio_engine
 engine = audio_engine.AudioEngine()
 
 # Create multiple synthesizers
-synth1 = audio_engine.SimpleSynth()
-synth2 = audio_engine.SimpleSynth()
+sine_synth = audio_engine.SineSynth()
+square_synth = audio_engine.SquareSynth()
 
 # Register synthesizers with the audio engine
-engine.registerSynth(synth1)
-engine.registerSynth(synth2)
+engine.registerSynth(sine_synth)
+engine.registerSynth(square_synth)
 
 # Start audio playback
 engine.start()
 
 # Play notes with fall-off
-synth1.setFrequency(440.0)  # A4
-synth1.setFallOff(200.0)   # 0.2 seconds fall-off
-synth1.noteOn()
-synth2.setFrequency(660.0)  # E5
-synth2.setFallOff(1000.0)   # 1 second fall-off
-synth2.noteOn()
+sine_synth.setFrequency(440.0)  # A4
+sine_synth.setFallOff(200.0)    # 0.2 seconds fall-off
+sine_synth.noteOn()
+square_synth.setFrequency(660.0)  # E5
+square_synth.setFallOff(1000.0)   # 1 second fall-off
+square_synth.noteOn()
 time.sleep(2)
-synth1.noteOff()
+sine_synth.noteOff()
 time.sleep(2)
 
-synth2.noteOff()
+square_synth.noteOff()
 time.sleep(2)
 
 # Stop audio playback
