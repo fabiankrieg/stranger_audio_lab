@@ -18,14 +18,18 @@ engine.registerSynth(synth2)
 # Start audio playback
 engine.start()
 
-# Change frequencies in real time
+# Play notes with fall-off
 synth1.setFrequency(440.0)  # A4
+synth1.setFallOff(0.99)     # Slow fall-off
+synth1.noteOn()
 synth2.setFrequency(660.0)  # E5
+synth2.setFallOff(0.95)     # Faster fall-off
+synth2.noteOn()
+time.sleep(2)
+synth1.noteOff()
 time.sleep(2)
 
-synth1.setFrequency(880.0)  # A5
-synth2.setFrequency(440.0)  # A4
-time.sleep(2)
+synth2.noteOff()
 
 # Stop audio playback
 engine.stop()

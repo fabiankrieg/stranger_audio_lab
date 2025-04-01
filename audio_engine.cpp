@@ -15,24 +15,51 @@
 
 class SimpleSynth {
 public:
-    SimpleSynth() : frequency(440.0f), phase(0.0f) {}
+    SimpleSynth() : frequency(440.0f), phase(0.0f), amplitude(0.0f), fallOff(0.99f), isOn(false) {}
 
     void setFrequency(float newFreq) {
         frequency.store(newFreq, std::memory_order_relaxed);
     }
 
+    void setFallOff(float newFallOff) {
+        fallOff.store(newFallOff, std::memory_order_relaxed);
+    }
+
+    void noteOn() {
+        amplitude.store(1.0f, std::memory_order_relaxed); // Start playback at full amplitude
+        isOn.store(true, std::memory_order_relaxed);      // Set state to "on"
+    }
+
+    void noteOff() {
+        isOn.store(false, std::memory_order_relaxed);     // Set state to "off"
+    }
+
     void generateBlock(float* buffer, unsigned int nFrames) {
         float phaseStep = (2.0f * M_PI * frequency.load(std::memory_order_relaxed)) / SAMPLE_RATE;
+        float currentAmplitude = amplitude.load(std::memory_order_relaxed);
+        float fallOffRate = fallOff.load(std::memory_order_relaxed);
+        bool synthIsOn = isOn.load(std::memory_order_relaxed);
 
         for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] += 0.2f * std::sin(phase); // Add to the buffer for mixing
+            buffer[i] += currentAmplitude * 0.2f * std::sin(phase);
             phase += phaseStep;
             if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
+
+            // Gradually reduce amplitude only if the synth is "off"
+            if (!synthIsOn && currentAmplitude > 0.0f) {
+                currentAmplitude *= fallOffRate;
+                if (currentAmplitude < 0.001f) currentAmplitude = 0.0f; // Stop completely if very low
+            }
         }
+
+        amplitude.store(currentAmplitude, std::memory_order_relaxed);
     }
 
 private:
     std::atomic<float> frequency;
+    std::atomic<float> amplitude; // Current amplitude of the synth
+    std::atomic<float> fallOff;   // Fall-off rate after noteOff
+    std::atomic<bool> isOn;       // Tracks whether the synth is "on" or "off"
     float phase;
 };
 
@@ -113,7 +140,10 @@ namespace py = pybind11;
 PYBIND11_MODULE(audio_engine, m) {
     py::class_<SimpleSynth, std::shared_ptr<SimpleSynth>>(m, "SimpleSynth")
         .def(py::init<>())
-        .def("setFrequency", &SimpleSynth::setFrequency);
+        .def("setFrequency", &SimpleSynth::setFrequency)
+        .def("setFallOff", &SimpleSynth::setFallOff)
+        .def("noteOn", &SimpleSynth::noteOn)
+        .def("noteOff", &SimpleSynth::noteOff);
 
     py::class_<AudioEngine>(m, "AudioEngine")
         .def(py::init<>())
