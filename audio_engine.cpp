@@ -1,8 +1,11 @@
 #include <RtAudio.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <atomic>
 #include <cmath>
 #include <iostream>
+#include <vector>
+#include <memory>
 
 #define _USE_MATH_DEFINES  // Fix for M_PI on Windows
 #include <math.h>
@@ -22,7 +25,7 @@ public:
         float phaseStep = (2.0f * M_PI * frequency.load(std::memory_order_relaxed)) / SAMPLE_RATE;
 
         for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] = 0.2f * std::sin(phase);
+            buffer[i] = 0.2f * std::sin(phase); // Generate values for this synth
             phase += phaseStep;
             if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
         }
@@ -35,7 +38,7 @@ private:
 
 class AudioEngine {
 public:
-    AudioEngine() : synth(std::make_shared<SimpleSynth>()), dac(nullptr) {}
+    AudioEngine() : dac(nullptr) {}
 
     ~AudioEngine() {
         stop();
@@ -79,8 +82,8 @@ public:
         }
     }
 
-    std::shared_ptr<SimpleSynth> getSynth() {
-        return synth;
+    void registerSynth(std::shared_ptr<SimpleSynth> synth) {
+        synths.push_back(synth);
     }
 
 private:
@@ -88,12 +91,27 @@ private:
         auto* engine = static_cast<AudioEngine*>(userData);
         auto* buffer = static_cast<float*>(outputBuffer);
 
-        engine->synth->generateBlock(buffer, nFrames);
+        // Clear the buffer
+        for (unsigned int i = 0; i < nFrames; i++) {
+            buffer[i] = 0.0f;
+        }
+
+        // Temporary buffer for each synth
+        std::vector<float> tempBuffer(nFrames, 0.0f);
+
+        // Mix all registered synthesizers
+        for (const auto& synth : engine->synths) {
+            synth->generateBlock(tempBuffer.data(), nFrames);
+            for (unsigned int i = 0; i < nFrames; i++) {
+                buffer[i] += tempBuffer[i]; // Sum the values from all synths
+            }
+        }
+
         return 0;
     }
 
     RtAudio* dac;
-    std::shared_ptr<SimpleSynth> synth;
+    std::vector<std::shared_ptr<SimpleSynth>> synths; // Store multiple synthesizers
 };
 
 namespace py = pybind11;
@@ -107,5 +125,5 @@ PYBIND11_MODULE(audio_engine, m) {
         .def(py::init<>())
         .def("start", &AudioEngine::start)
         .def("stop", &AudioEngine::stop)
-        .def("getSynth", &AudioEngine::getSynth);
+        .def("registerSynth", &AudioEngine::registerSynth);
 }
