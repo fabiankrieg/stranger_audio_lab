@@ -25,7 +25,7 @@ public:
         float phaseStep = (2.0f * M_PI * frequency.load(std::memory_order_relaxed)) / SAMPLE_RATE;
 
         for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] = 0.2f * std::sin(phase); // Generate values for this synth
+            buffer[i] += 0.2f * std::sin(phase); // Add to the buffer for mixing
             phase += phaseStep;
             if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
         }
@@ -96,15 +96,9 @@ private:
             buffer[i] = 0.0f;
         }
 
-        // Temporary buffer for each synth
-        std::vector<float> tempBuffer(nFrames, 0.0f);
-
-        // Mix all registered synthesizers
+        // Let each synth add its output to the buffer
         for (const auto& synth : engine->synths) {
-            synth->generateBlock(tempBuffer.data(), nFrames);
-            for (unsigned int i = 0; i < nFrames; i++) {
-                buffer[i] += tempBuffer[i]; // Sum the values from all synths
-            }
+            synth->generateBlock(buffer, nFrames);
         }
 
         return 0;
