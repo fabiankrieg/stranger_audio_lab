@@ -1,6 +1,8 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <pybind11/pybind11.h>
+
 
 class SimpleSynth
 {
