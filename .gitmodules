@@ -2,3 +2,7 @@
 	path = extern/pybind11
 	url = ../../pybind/pybind11
 	branch = stable
+[submodule "extern/JUCE"]
+	path = extern/JUCE
+	url = git@github.com:juce-framework/JUCE.git
+	branch = master
