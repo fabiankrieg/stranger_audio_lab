@@ -10,10 +10,11 @@ find_package(Python COMPONENTS Interpreter Development)
 # Create the library
 add_library(audio_engine MODULE audio_engine.cpp)
 
-# Ensure JUCE and Pybind11 are linked correctly
+# Link against the required JUCE modules
 target_link_libraries(audio_engine PRIVATE
     juce::juce_audio_basics
     juce::juce_audio_devices
+    juce::juce_audio_utils
     pybind11::module
 )
 
