@@ -2,3 +2,11 @@
 	path = extern/pybind11
 	url = ../../pybind/pybind11
 	branch = stable
+[submodule "extern/TONIC"]
+	path = extern/TONIC
+	url = git@github.com:TonicAudio/Tonic.git
+	branch = master
+[submodule "extern/rtaudio"]
+	path = extern/rtaudio
+	url = git@github.com:thestk/rtaudio.git
+	branch = master
