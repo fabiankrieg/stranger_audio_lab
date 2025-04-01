@@ -179,3 +179,7 @@ cython_debug/
 
 # Builds
 bindings
+
+extern/JUCE_dep
+
+.vscode
