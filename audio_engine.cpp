@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <Tonic.h>
 
 #define _USE_MATH_DEFINES  // Fix for M_PI on Windows
 #include <math.h>
@@ -39,8 +40,13 @@ public:
         float fallOffRate = 1.0f / (fallOffTimeMs.load(std::memory_order_relaxed) / 1000.0f * SAMPLE_RATE); // Linear decay per sample
         bool synthIsOn = isOn.load(std::memory_order_relaxed);
 
+        // Generate audio for the sample window
+        generateSamples(buffer, nFrames);
+
+        // Apply amplitude and fall-off
         for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] += currentAmplitude * 0.2f * generateSample();
+            buffer[i] *= currentAmplitude * 0.2f;
+
             // Gradually reduce amplitude only if the synth is "off"
             if (!synthIsOn && currentAmplitude > 0.0f) {
                 currentAmplitude -= fallOffRate;
@@ -52,7 +58,7 @@ public:
     }
 
 protected:
-    virtual float generateSample() = 0; // Pure virtual function for generating a sample
+    virtual void generateSamples(float* buffer, unsigned int nFrames) = 0; // Pure virtual function for generating a block of samples
 
     std::atomic<float> frequency{440.0f};
     std::atomic<float> amplitude{0.0f}; // Current amplitude of the synth
@@ -63,24 +69,46 @@ protected:
 
 class SineSynth : public SimpleSynth {
 protected:
-    float generateSample() override {
+    void generateSamples(float* buffer, unsigned int nFrames) override {
         float phaseStep = (2.0f * M_PI * frequency.load(std::memory_order_relaxed)) / SAMPLE_RATE;
-        float sample = std::sin(phase);
-        phase += phaseStep;
-        if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
-        return sample;
+
+        for (unsigned int i = 0; i < nFrames; i++) {
+            buffer[i] = std::sin(phase);
+            phase += phaseStep;
+            if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
+        }
     }
 };
 
 class SquareSynth : public SimpleSynth {
 protected:
-    float generateSample() override {
+    void generateSamples(float* buffer, unsigned int nFrames) override {
         float phaseStep = (2.0f * M_PI * frequency.load(std::memory_order_relaxed)) / SAMPLE_RATE;
-        float sample = (phase < M_PI) ? 1.0f : -1.0f;
-        phase += phaseStep;
-        if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
-        return sample;
+
+        for (unsigned int i = 0; i < nFrames; i++) {
+            buffer[i] = (phase < M_PI) ? 1.0f : -1.0f;
+            phase += phaseStep;
+            if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
+        }
     }
+};
+
+class TonicSquareSynth : public SimpleSynth {
+public:
+    TonicSquareSynth() {
+        generator = Tonic::RectWave();
+        synth.setOutputGen(generator);
+    }
+
+protected:
+    void generateSamples(float* buffer, unsigned int nFrames) override {
+        generator.freq(frequency.load(std::memory_order_relaxed)); // Update frequency
+        synth.fillBufferOfFloats(buffer, nFrames, 1); // Generate a block of samples
+    }
+
+private:
+    Tonic::RectWave generator; // Tonic square wave generator
+    Tonic::Synth synth;        // Tonic synth to manage the generator
 };
 
 class AudioEngine {
@@ -168,6 +196,9 @@ PYBIND11_MODULE(audio_engine, m) {
         .def(py::init<>());
 
     py::class_<SquareSynth, SimpleSynth, std::shared_ptr<SquareSynth>>(m, "SquareSynth")
+        .def(py::init<>());
+
+    py::class_<TonicSquareSynth, SimpleSynth, std::shared_ptr<TonicSquareSynth>>(m, "TonicSquareSynth")
         .def(py::init<>());
 
     py::class_<AudioEngine>(m, "AudioEngine")
