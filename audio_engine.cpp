@@ -1,80 +1,78 @@
-#include <juce_audio_utils/juce_audio_utils.h>  
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_audio_basics/juce_audio_basics.h>
+#include <RtAudio.h>
 #include <pybind11/pybind11.h>
+#include <atomic>
+#include <cmath>
+#include <iostream>
 
+#define _USE_MATH_DEFINES  // Fix for M_PI on Windows
+#include <math.h>
 
-class SimpleSynth
-{
+#define SAMPLE_RATE 48000
+#define BUFFER_SIZE 256
+
+class AudioEngine {
 public:
-    void setFrequency(float newFrequency, double sampleRate)
-    {
-        frequency = newFrequency;
-        phaseDelta = juce::MathConstants<double>::twoPi * frequency / sampleRate;
-    }
-    
-    float getNextSample()
-    {
-        float sample = std::sin(phase) * 0.2f;
-        phase += phaseDelta;
-        if(phase >= juce::MathConstants<double>::twoPi)
-            phase -= juce::MathConstants<double>::twoPi;
-           
-        return sample;
-    }
-    
-private:
-    double phase = 0.0;
-    double phaseDelta = 0.0;
-    float frequency = 440.0f;
-};
+    AudioEngine() : phase(0.0f), frequency(440.0f) {
+        dac = new RtAudio();
+        if (dac->getDeviceCount() == 0) {
+            std::cerr << "No audio devices found!" << std::endl;
+            delete dac;
+            throw std::runtime_error("No audio device found");
+        }
 
-class AudioEngine : public juce::AudioAppComponent
-{
-public:
-    AudioEngine() {
-        setAudioChannels(0, 2);
-    }
+        RtAudio::StreamParameters params;
+        params.deviceId = dac->getDefaultOutputDevice();
+        params.nChannels = 1;
+        unsigned int bufferFrames = BUFFER_SIZE;
 
-    ~AudioEngine() {
-        shutdownAudio();
-    }
-
-    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override {
-        this->currentSampleRate = sampleRate;  // Store sample rate for later use
-        osc.setFrequency(frequency, currentSampleRate);
-    }
-
-    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override {
-        for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel) {
-            auto* buffer = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
-            for (int sample = 0; sample < bufferToFill.numSamples; ++sample)
-                buffer[sample] = osc.getNextSample();
+        try {
+            dac->openStream(&params, nullptr, RTAUDIO_FLOAT32, SAMPLE_RATE, &bufferFrames, &audioCallback, this);
+            dac->startStream();
+        } catch (const std::exception &e) {  // FIX: Use std::exception
+            std::cerr << "RtAudio Error: " << e.what() << std::endl;
+            delete dac;
+            throw;
         }
     }
 
-    void releaseResources() override {}
-
-    void setFrequency(float newFrequency) {
-        frequency = newFrequency;
-        if (currentSampleRate > 0)  // Ensure we have a valid sample rate
-            osc.setFrequency(frequency, currentSampleRate);
+    ~AudioEngine() {
+        if (dac) {
+            if (dac->isStreamOpen()) {
+                dac->stopStream();
+                dac->closeStream();
+            }
+            delete dac;
+        }
     }
 
-    double getStoredSampleRate() const {
-        return currentSampleRate;
+    void setFrequency(float newFreq) {
+        frequency.store(newFreq, std::memory_order_relaxed);
     }
 
 private:
-    float frequency = 440.0f;
-    double currentSampleRate = 0.0;  // Store the sample rate
-    SimpleSynth osc;
+    static int audioCallback(void* outputBuffer, void*, unsigned int nFrames, double, RtAudioStreamStatus, void* userData) {
+        auto* engine = static_cast<AudioEngine*>(userData);
+        auto* buffer = static_cast<float*>(outputBuffer);
+
+        float phaseStep = (2.0f * M_PI * engine->frequency) / SAMPLE_RATE;  // FIX: M_PI is now available
+
+        for (unsigned int i = 0; i < nFrames; i++) {
+            buffer[i] = 0.2f * std::sin(engine->phase);
+            engine->phase += phaseStep;
+            if (engine->phase > 2.0f * M_PI) engine->phase -= 2.0f * M_PI;
+        }
+
+        return 0;
+    }
+
+    RtAudio* dac;
+    std::atomic<float> frequency;
+    float phase;
 };
 
-
 namespace py = pybind11;
-PYBIND11_MODULE(audio_engine, m)
-{
+
+PYBIND11_MODULE(audio_engine, m) {
     py::class_<AudioEngine>(m, "AudioEngine")
         .def(py::init<>())
         .def("setFrequency", &AudioEngine::setFrequency);

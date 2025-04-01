@@ -1,17 +1,18 @@
 import sys
 import time
+import random
 
-sys.path.insert(0, "bindings/Debug")  # Ensure Python can find the module
+sys.path.insert(0, "bindings")  # Ensure Python can find the module
 import audio_engine
 
-# Initialize the audio engine
+import time
+
 engine = audio_engine.AudioEngine()
 
-# Set the frequency to 440Hz (A4)
-engine.setFrequency(440.0)
+# Change frequency in real time
+engine.setFrequency(880.0)  # A4 -> A5
+time.sleep(2)
 
-# Keep the audio engine running for 5 seconds to hear the sine wave
-print("Playing 440Hz sine wave for 5 seconds...")
-time.sleep(5)
+engine.setFrequency(440.0)  # Back to A4
+time.sleep(2)
 
-print("Playback finished.")
