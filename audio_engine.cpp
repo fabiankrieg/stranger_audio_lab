@@ -55,7 +55,7 @@ private:
 class SynthWrapper {
 public:
     SynthWrapper() {
-        // Taken from https://github.com/Dewb/Tonic/blob/midi/Demo/Standalone/PolyMIDIDemo/main.cpp
+        // Adapted from https://github.com/Dewb/Tonic/blob/midi/Demo/Standalone/PolyMIDIDemo/main.cpp
         
         noteNum = synth.addParameter("polyNote", 0.0);
         gate = synth.addParameter("polyGate", 0.0);
@@ -78,44 +78,17 @@ public:
     
         filter = Tonic::LPF24().Q(1.0 + noteVelocity * 0.02).cutoff( filterFreq );
 
-        //output = ;
-
         synth.setOutputGen((((tone * env) >> filter) * (0.02 + noteVelocity * 0.005)));
 
-        /*ampParam = synth.addParameter("amp");
-        midiNoteParam = synth.addParameter("midiNote"); // Add midiNote as a ControlParameter
-        sawWave = Tonic::SawtoothWave();
-
-        // Use ControlMidiToFreq to convert midiNoteParam to frequency
-        Tonic::ControlMidiToFreq midiToFreq = Tonic::ControlMidiToFreq().input(midiNoteParam);
-        sawWave.freq(midiToFreq);
-
-        // Add BitCrusher effect controlled by anxiety
-        Tonic::BitCrusher bitCrusher;
-        bitCrusher.input(sawWave * ampParam);
-
-        // Use ControlParameter for anxiety
-        anxietyControl = synth.addParameter("anxiety");
-        bitCrusher.bitDepth(Tonic::ControlValue(256) - anxietyControl * 255);
-
-        synth.setOutputGen(bitCrusher);
-
-        // Register callback to update anxietyControl
-        ControlParameters::getInstance().registerAnxietyCallback([this](float value) {
-            anxietyControl.setNormalizedValue(value);
-            //synth.publishChanges(); // Ensure changes are propagated to the synth
-        }); */
     }
 
     void startNote(int midiNote, float amplitude) {
         synth.setParameter("polyNote",static_cast<float>(midiNote)); // Update the midiNote parameter
-        synth.setParameter("polyGate",static_cast<float>(amplitude)); // Update the midiNote parameter
-        //synth.publishChanges(); // Ensure changes are propagated to the synth
+        synth.setParameter("polyGate",static_cast<float>(amplitude)); 
     }
 
     void stopNote() {
-        synth.setParameter("polyGate",static_cast<float>(0.0f)); // Update the midiNote parameter
-        //synth.publishChanges(); // Ensure changes are propagated to the synth
+        synth.setParameter("polyGate",static_cast<float>(0.0f)); 
     }
 
     Tonic::Synth& getSynth() {
