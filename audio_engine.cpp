@@ -84,7 +84,8 @@ public:
 
     void startNote(int midiNote, float amplitude) {
         synth.setParameter("polyNote",static_cast<float>(midiNote)); // Update the midiNote parameter
-        synth.setParameter("polyGate",static_cast<float>(amplitude)); 
+        synth.setParameter("polyGate",static_cast<float>(1.0f)); 
+        synth.setParameter("polyVelocity",static_cast<float>(amplitude)); 
     }
 
     void stopNote() {
