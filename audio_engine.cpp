@@ -7,6 +7,7 @@
 #include <vector>
 #include <memory>
 #include <Tonic.h>
+#include <mutex>
 
 #define _USE_MATH_DEFINES  // Fix for M_PI on Windows
 #include <math.h>
@@ -14,19 +15,70 @@
 #define SAMPLE_RATE 48000
 #define BUFFER_SIZE 256
 
+// Singleton class for global control parameters
+class ControlParameters {
+public:
+    static ControlParameters& getInstance() {
+        static ControlParameters instance;
+        return instance;
+    }
+
+    void setAnxiety(float value) {
+        std::lock_guard<std::mutex> lock(mutex);
+        anxiety = std::min(std::max(value, 0.0f), 1.0f); // Ensure value is in range [0, 1]
+        for (auto& callback : anxietyCallbacks) {
+            callback(anxiety);
+        }
+    }
+
+    float getAnxiety() {
+        std::lock_guard<std::mutex> lock(mutex);
+        return anxiety;
+    }
+
+    void registerAnxietyCallback(const std::function<void(float)>& callback) {
+        std::lock_guard<std::mutex> lock(mutex);
+        anxietyCallbacks.push_back(callback);
+    }
+
+private:
+    ControlParameters() : anxiety(0.0f) {} // Default anxiety value
+    ControlParameters(const ControlParameters&) = delete;
+    ControlParameters& operator=(const ControlParameters&) = delete;
+
+    float anxiety;
+    std::mutex mutex;
+    std::vector<std::function<void(float)>> anxietyCallbacks; // List of callbacks for anxiety changes
+};
+
 // Wrapper class for Tonic::Synth
 class SynthWrapper {
 public:
     SynthWrapper() {
         ampParam = synth.addParameter("amp");
-        rectWave = Tonic::RectWave();
-        rectWave.freq(440.0f); // Default frequency
-        synth.setOutputGen(rectWave * ampParam);
+        sawWave = Tonic::SawtoothWave();
+        sawWave.freq(440.0f); // Default frequency
+
+        // Add BitCrusher effect controlled by anxiety
+        Tonic::BitCrusher bitCrusher;
+        bitCrusher.input(sawWave * ampParam);
+
+        // Use ControlParameter for anxiety
+        anxietyControl = synth.addParameter("anxiety");
+        bitCrusher.bitDepth(Tonic::ControlValue(256) - anxietyControl * 255);
+
+        synth.setOutputGen(bitCrusher);
+
+        // Register callback to update anxietyControl
+        ControlParameters::getInstance().registerAnxietyCallback([this, &bitCrusher](float value) {
+            anxietyControl.setNormalizedValue(value);
+            bitCrusher.bitDepth(Tonic::ControlValue(256) - anxietyControl * 255);
+        });
     }
 
     void startNote(int midiNote, float amplitude) {
         Tonic::ControlMidiToFreq midiToFreq = Tonic::ControlMidiToFreq().input(Tonic::ControlValue(midiNote));
-        rectWave.freq(midiToFreq);
+        sawWave.freq(midiToFreq);
         ampParam.setNormalizedValue(amplitude);
     }
 
@@ -40,8 +92,9 @@ public:
 
 private:
     Tonic::Synth synth;
-    Tonic::RectWave rectWave;
+    Tonic::SawtoothWave sawWave; // Changed from RectWave to SawtoothWave
     Tonic::ControlParameter ampParam;
+    Tonic::ControlParameter anxietyControl; // ControlParameter for anxiety
 };
 
 class AudioEngine {
@@ -124,4 +177,9 @@ PYBIND11_MODULE(audio_engine, m) {
         .def(py::init<>())
         .def("startNote", &SynthWrapper::startNote)
         .def("stopNote", &SynthWrapper::stopNote);
+
+    py::class_<ControlParameters>(m, "ControlParameters")
+        .def_static("getInstance", &ControlParameters::getInstance, py::return_value_policy::reference)
+        .def("setAnxiety", &ControlParameters::setAnxiety)
+        .def("getAnxiety", &ControlParameters::getAnxiety);
 }
