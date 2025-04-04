@@ -55,9 +55,40 @@ private:
 class SynthWrapper {
 public:
     SynthWrapper() {
-        ampParam = synth.addParameter("amp");
+        // Taken from https://github.com/Dewb/Tonic/blob/midi/Demo/Standalone/PolyMIDIDemo/main.cpp
+        
+        noteNum = synth.addParameter("polyNote", 0.0);
+        gate = synth.addParameter("polyGate", 0.0);
+        noteVelocity = synth.addParameter("polyVelocity", 0.0);
+        voiceNumber = synth.addParameter("polyVoiceNumber", 0.0);
+
+        voiceFreq = Tonic::ControlMidiToFreq().input(noteNum);
+
+        tone = (Tonic::Generator)(Tonic::SquareWave().freq(voiceFreq) * Tonic::SineWave().freq(50));
+
+        env = Tonic::ADSR()
+        .attack(0.04)
+        .decay( 0.1 )
+        .sustain(0.8)
+        .release(0.6)
+        .doesSustain(true)
+        .trigger(gate);
+
+        filterFreq = voiceFreq * 0.5 + 200;
+    
+        filter = Tonic::LPF24().Q(1.0 + noteVelocity * 0.02).cutoff( filterFreq );
+
+        //output = ;
+
+        synth.setOutputGen((((tone * env) >> filter) * (0.02 + noteVelocity * 0.005)));
+
+        /*ampParam = synth.addParameter("amp");
+        midiNoteParam = synth.addParameter("midiNote"); // Add midiNote as a ControlParameter
         sawWave = Tonic::SawtoothWave();
-        sawWave.freq(440.0f); // Default frequency
+
+        // Use ControlMidiToFreq to convert midiNoteParam to frequency
+        Tonic::ControlMidiToFreq midiToFreq = Tonic::ControlMidiToFreq().input(midiNoteParam);
+        sawWave.freq(midiToFreq);
 
         // Add BitCrusher effect controlled by anxiety
         Tonic::BitCrusher bitCrusher;
@@ -70,20 +101,21 @@ public:
         synth.setOutputGen(bitCrusher);
 
         // Register callback to update anxietyControl
-        ControlParameters::getInstance().registerAnxietyCallback([this, &bitCrusher](float value) {
+        ControlParameters::getInstance().registerAnxietyCallback([this](float value) {
             anxietyControl.setNormalizedValue(value);
-            bitCrusher.bitDepth(Tonic::ControlValue(256) - anxietyControl * 255);
-        });
+            //synth.publishChanges(); // Ensure changes are propagated to the synth
+        }); */
     }
 
     void startNote(int midiNote, float amplitude) {
-        Tonic::ControlMidiToFreq midiToFreq = Tonic::ControlMidiToFreq().input(Tonic::ControlValue(midiNote));
-        sawWave.freq(midiToFreq);
-        ampParam.setNormalizedValue(amplitude);
+        synth.setParameter("polyNote",static_cast<float>(midiNote)); // Update the midiNote parameter
+        synth.setParameter("polyGate",static_cast<float>(amplitude)); // Update the midiNote parameter
+        //synth.publishChanges(); // Ensure changes are propagated to the synth
     }
 
     void stopNote() {
-        ampParam.setNormalizedValue(0.0f); // Gradually reduce amplitude to stop the note
+        synth.setParameter("polyGate",static_cast<float>(0.0f)); // Update the midiNote parameter
+        //synth.publishChanges(); // Ensure changes are propagated to the synth
     }
 
     Tonic::Synth& getSynth() {
@@ -94,7 +126,20 @@ private:
     Tonic::Synth synth;
     Tonic::SawtoothWave sawWave; // Changed from RectWave to SawtoothWave
     Tonic::ControlParameter ampParam;
+    Tonic::ControlParameter midiNoteParam; // ControlParameter for MIDI note
     Tonic::ControlParameter anxietyControl; // ControlParameter for anxiety
+
+    Tonic::ControlParameter noteNum;
+    Tonic::ControlParameter gate;
+    Tonic::ControlParameter noteVelocity;
+    Tonic::ControlParameter voiceNumber;
+    Tonic::ControlGenerator voiceFreq;
+    Tonic::Generator tone;
+    Tonic::ADSR env;
+    Tonic::LPF24 filter;
+    Tonic::ControlGenerator filterFreq;
+    Tonic::ControlGenerator output;
+
 };
 
 class AudioEngine {
