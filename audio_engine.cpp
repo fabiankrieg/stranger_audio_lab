@@ -14,6 +14,36 @@
 #define SAMPLE_RATE 48000
 #define BUFFER_SIZE 256
 
+// Wrapper class for Tonic::Synth
+class SynthWrapper {
+public:
+    SynthWrapper() {
+        ampParam = synth.addParameter("amp");
+        rectWave = Tonic::RectWave();
+        rectWave.freq(440.0f); // Default frequency
+        synth.setOutputGen(rectWave * ampParam);
+    }
+
+    void startNote(int midiNote, float amplitude) {
+        Tonic::ControlMidiToFreq midiToFreq = Tonic::ControlMidiToFreq().input(Tonic::ControlValue(midiNote));
+        rectWave.freq(midiToFreq);
+        ampParam.setNormalizedValue(amplitude);
+    }
+
+    void stopNote() {
+        ampParam.setNormalizedValue(0.0f); // Gradually reduce amplitude to stop the note
+    }
+
+    Tonic::Synth& getSynth() {
+        return synth;
+    }
+
+private:
+    Tonic::Synth synth;
+    Tonic::RectWave rectWave;
+    Tonic::ControlParameter ampParam;
+};
+
 class AudioEngine {
 public:
     AudioEngine() : dac(nullptr) {}
@@ -60,7 +90,8 @@ public:
         }
     }
 
-    void registerSynth(std::shared_ptr<Tonic::Synth> synth) {
+    void registerSynth(std::shared_ptr<SynthWrapper> synth) {
+        mixer.addInput(synth->getSynth());
         synths.push_back(synth);
     }
 
@@ -69,21 +100,15 @@ private:
         auto* engine = static_cast<AudioEngine*>(userData);
         auto* buffer = static_cast<float*>(outputBuffer);
 
-        // Clear the buffer
-        for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] = 0.0f;
-        }
-
-        // Let each synth add its output to the buffer
-        for (const auto& synth : engine->synths) {
-            synth->fillBufferOfFloats(buffer, nFrames, 1);
-        }
+        // Use the mixer to fill the buffer with mixed audio
+        engine->mixer.fillBufferOfFloats(buffer, nFrames, 1);
 
         return 0;
     }
 
     RtAudio* dac;
-    std::vector<std::shared_ptr<Tonic::Synth>> synths; // Store multiple Tonic synths
+    Tonic::Mixer mixer; // Mixer to combine signals from all synths
+    std::vector<std::shared_ptr<SynthWrapper>> synths; // Store multiple SynthWrapper instances
 };
 
 namespace py = pybind11;
@@ -95,11 +120,8 @@ PYBIND11_MODULE(audio_engine, m) {
         .def("stop", &AudioEngine::stop)
         .def("registerSynth", &AudioEngine::registerSynth);
 
-    py::class_<Tonic::Synth, std::shared_ptr<Tonic::Synth>>(m, "Synth")
+    py::class_<SynthWrapper, std::shared_ptr<SynthWrapper>>(m, "SynthWrapper")
         .def(py::init<>())
-        .def("setRectWave", [](Tonic::Synth& synth, float frequency) {
-            Tonic::RectWave rectWave;
-            rectWave.freq(frequency);
-            synth.setOutputGen(rectWave);
-        });
+        .def("startNote", &SynthWrapper::startNote)
+        .def("stopNote", &SynthWrapper::stopNote);
 }

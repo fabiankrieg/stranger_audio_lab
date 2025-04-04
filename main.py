@@ -7,15 +7,10 @@ import audio_engine
 # Initialize the audio engine
 engine = audio_engine.AudioEngine()
 
-# Create Tonic synthesizers
-sine_synth = audio_engine.Synth()
-sine_synth.setRectWave(660.0)  # E5
-
-square_synth = audio_engine.Synth()
-square_synth.setRectWave(440.0)  # A4
-
-tonic_square_synth = audio_engine.Synth()
-tonic_square_synth.setRectWave(330.0)  # E4
+# Create SynthWrapper instances
+sine_synth = audio_engine.SynthWrapper()
+square_synth = audio_engine.SynthWrapper()
+tonic_square_synth = audio_engine.SynthWrapper()
 
 # Register synthesizers with the audio engine
 engine.registerSynth(sine_synth)
@@ -25,7 +20,20 @@ engine.registerSynth(tonic_square_synth)
 # Start audio playback
 engine.start()
 
-# Play notes (frequency already set)
+# Play MIDI notes
+sine_synth.startNote(76, 0.5)  # E5 (MIDI note 76) with amplitude 0.5
+time.sleep(2)
+square_synth.startNote(69, 0.5)  # A4 (MIDI note 69) with amplitude 0.5
+time.sleep(2)
+tonic_square_synth.startNote(64, 0.5)  # E4 (MIDI note 64) with amplitude 0.5
+
+time.sleep(2)
+
+# Stop MIDI notes
+sine_synth.stopNote()
+square_synth.stopNote()
+tonic_square_synth.stopNote()
+
 time.sleep(2)
 
 # Stop audio playback
