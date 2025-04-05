@@ -1,5 +1,8 @@
 # stranger_audio_lab
 
+> For the ones who dream of stranger worlds
+
+
 Let's build some strange audio which happens to spook us procedurally.
 
 
