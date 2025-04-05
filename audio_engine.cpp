@@ -64,7 +64,7 @@ public:
 
         voiceFreq = Tonic::ControlMidiToFreq().input(noteNum);
 
-        tone = (Tonic::Generator)(Tonic::SquareWave().freq(voiceFreq) * Tonic::SineWave().freq(50));
+        tone = (Tonic::Generator)(noteVelocity * Tonic::SquareWave().freq(voiceFreq) * Tonic::SineWave().freq(50));
 
         env = Tonic::ADSR()
         .attack(0.04)
@@ -78,7 +78,7 @@ public:
     
         filter = Tonic::LPF24().Q(1.0 + noteVelocity * 0.02).cutoff( filterFreq );
 
-        synth.setOutputGen((((tone * env) >> filter) * (0.02 + noteVelocity * 0.005)));
+        synth.setOutputGen((((tone * env) >> filter)));
 
     }
 

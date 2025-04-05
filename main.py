@@ -25,15 +25,15 @@ engine.registerSynth(tonic_square_synth)
 engine.start()
 
 # Play MIDI notes
-sine_synth.startNote(64, 0.5)  # E5 (MIDI note 76) with amplitude 0.5
+sine_synth.startNote(64, 0.2)  # E5 (MIDI note 76) with amplitude 0.5
 time.sleep(1)
 print("1")
 control_params.setAnxiety(1)  # Set anxiety to 0.5 (mid-range)
-sine_synth.startNote(65, 100)
+sine_synth.startNote(65, 0.55)
 time.sleep(1)
 print("1")
 control_params.setAnxiety(1)  # Set anxiety to 0.5 (mid-range)
-sine_synth.startNote(63, 0.5)
+sine_synth.startNote(63, 0.1)
 time.sleep(1)
 
 # square_synth.startNote(69, 0.5)  # A4 (MIDI note 69) with amplitude 0.5
