@@ -16,15 +16,41 @@
 #define BUFFER_SIZE 256
 
 
-// Wrapper class for Tonic::Synth
+// Base class for Tonic Synth Wrapper
 class SynthWrapper {
 public:
-    SynthWrapper(const std::string& waveform = "SineWave", float attack = 0.04, float decay = 0.1, float sustain = 0.8, float release = 0.6, float baseFilterFreq = 200.0, float filterQ = 1.0) {
+    SynthWrapper() {
         // Add parameters to the synth
         noteNum = synth.addParameter("polyNote", 0.0);
         gate = synth.addParameter("polyGate", 0.0);
         noteVelocity = synth.addParameter("polyVelocity", 0.0);
+    }
 
+    virtual ~SynthWrapper() = default;
+
+    virtual void startNote(int midiNote, float amplitude) {
+        synth.setParameter("polyNote", static_cast<float>(midiNote));
+        synth.setParameter("polyGate", 1.0f);
+        synth.setParameter("polyVelocity", amplitude);
+    }
+
+    virtual void stopNote() {
+        synth.setParameter("polyGate", 0.0f);
+    }
+
+    Tonic::Synth& getSynth() {
+        return synth;
+    }
+
+protected:
+    Tonic::Synth synth;
+    Tonic::ControlParameter noteNum, gate, noteVelocity;
+};
+
+// Derived class implementing a simple ADSR filter synth
+class TonicSimpleADSRFilterSynth : public SynthWrapper {
+public:
+    TonicSimpleADSRFilterSynth(const std::string& waveform = "SineWave", float attack = 0.04, float decay = 0.1, float sustain = 0.8, float release = 0.6, float baseFilterFreq = 200.0, float filterQ = 1.0) {
         // Configure ADSR envelope
         env = Tonic::ADSR()
             .attack(attack)
@@ -54,23 +80,7 @@ public:
         synth.setOutputGen((tone * env) >> filter);
     }
 
-    void startNote(int midiNote, float amplitude) {
-        synth.setParameter("polyNote", static_cast<float>(midiNote));
-        synth.setParameter("polyGate", 1.0f);
-        synth.setParameter("polyVelocity", amplitude);
-    }
-
-    void stopNote() {
-        synth.setParameter("polyGate", 0.0f);
-    }
-
-    Tonic::Synth& getSynth() {
-        return synth;
-    }
-
 private:
-    Tonic::Synth synth;
-    Tonic::ControlParameter noteNum, gate, noteVelocity;
     Tonic::ControlGenerator voiceFreq, filterFreq;
     Tonic::Generator tone;
     Tonic::ADSR env;
@@ -153,8 +163,10 @@ PYBIND11_MODULE(audio_engine, m) {
         .def("stop", &AudioEngine::stop)
         .def("registerSynth", &AudioEngine::registerSynth);
 
-    py::class_<SynthWrapper, std::shared_ptr<SynthWrapper>>(m, "SynthWrapper")
-        .def(py::init<const std::string&, float, float, float, float, float, float>()) // Updated constructor
-        .def("startNote", &SynthWrapper::startNote)
-        .def("stopNote", &SynthWrapper::stopNote);
+    py::class_<SynthWrapper, std::shared_ptr<SynthWrapper>>(m, "SynthWrapper");
+
+    py::class_<TonicSimpleADSRFilterSynth, SynthWrapper, std::shared_ptr<TonicSimpleADSRFilterSynth>>(m, "TonicSimpleADSRFilterSynth")
+        .def(py::init<const std::string&, float, float, float, float, float, float>())
+        .def("startNote", &TonicSimpleADSRFilterSynth::startNote)
+        .def("stopNote", &TonicSimpleADSRFilterSynth::stopNote);
 }

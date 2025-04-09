@@ -7,10 +7,10 @@ import audio_engine
 # Initialize the audio engine
 engine = audio_engine.AudioEngine()
 
-# Create and configure synthesizers using the constructor
-sine_synth = audio_engine.SynthWrapper("SineWave", 0.05, 0.1, 0.7, 0.5, 300.0, 1.2)
-square_synth = audio_engine.SynthWrapper("SquareWave", 0.02, 0.2, 0.6, 0.4, 250.0, 1.0)
-saw_synth = audio_engine.SynthWrapper("SawtoothWave", 0.03, 0.15, 0.8, 0.6, 200.0, 0.8)
+# Create and configure synthesizers using the new class
+sine_synth = audio_engine.TonicSimpleADSRFilterSynth("SineWave", 0.05, 0.1, 0.7, 0.5, 300.0, 1.2)
+square_synth = audio_engine.TonicSimpleADSRFilterSynth("SquareWave", 0.02, 0.2, 0.6, 0.4, 250.0, 1.0)
+saw_synth = audio_engine.TonicSimpleADSRFilterSynth("SawtoothWave", 0.03, 0.15, 0.8, 0.6, 200.0, 0.8)
 
 # Register synthesizers with the audio engine
 engine.registerSynth(sine_synth)
