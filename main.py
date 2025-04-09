@@ -24,6 +24,9 @@ engine.start()
 sine_synth.startNote(64, 0.2)  # E5 (MIDI note 76) with amplitude 0.5
 time.sleep(1)
 print("1")
+sine_synth.startNote(63, 0.2)  # E5 (MIDI note 76) with amplitude 0.5
+time.sleep(1)
+print("1")
 sine_synth.startNote(65, 0.55)
 time.sleep(1)
 print("1")
