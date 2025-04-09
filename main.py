@@ -7,13 +7,16 @@ import audio_engine
 # Initialize the audio engine
 engine = audio_engine.AudioEngine()
 
-# Create and configure synthesizers using the new class
-sine_synth = audio_engine.TonicSimpleADSRFilterSynth("SineWave", 0.05, 0.1, 0.7, 0.5, 300.0, 1.2)
-square_synth = audio_engine.TonicSimpleADSRFilterSynth("SquareWave", 0.02, 0.2, 0.6, 0.4, 250.0, 1.0)
-saw_synth = audio_engine.TonicSimpleADSRFilterSynth("SawtoothWave", 0.03, 0.15, 0.8, 0.6, 200.0, 0.8)
+# Create ControlParameters and add parameters
+control_params = audio_engine.ControlParameters()
+control_params.addParameter("attack_control", 0.05)
+control_params.addParameter("decay_control", 0.1)
+
+# Create and configure synthesizers using ControlParameters
+square_synth = audio_engine.TonicSimpleADSRFilterSynth("SquareWave", control_params, "attack_control", "decay_control", 0.6, 0.4, 250.0, 1.0)
+saw_synth = audio_engine.TonicSimpleADSRFilterSynth("SawtoothWave", control_params, "attack_control", "decay_control", 0.8, 0.6, 200.0, 0.8)
 
 # Register synthesizers with the audio engine
-engine.registerSynth(sine_synth)
 engine.registerSynth(square_synth)
 engine.registerSynth(saw_synth)
 
@@ -21,20 +24,23 @@ engine.registerSynth(saw_synth)
 engine.start()
 
 # Play MIDI notes
-sine_synth.startNote(60, 0.5)  # C4
-time.sleep(1)
 square_synth.startNote(64, 0.5)  # E4
 time.sleep(1)
 saw_synth.startNote(67, 0.5)  # G4
 time.sleep(1)
-saw_synth.stopNote()
-square_synth.stopNote()
+
+# Dynamically modify parameters
+print("Modifying attack_control to 0.1 and decay_control to 0.2")
+control_params.addParameter("attack_control", 0.1)
+control_params.addParameter("decay_control", 0.2)
 time.sleep(1)
-sine_synth.startNote(58, 0.5)  # C4
+
+print("Modifying attack_control to 0.2 and decay_control to 0.3")
+control_params.addParameter("attack_control", 0.2)
+control_params.addParameter("decay_control", 0.3)
 time.sleep(1)
 
 # Stop MIDI notes
-sine_synth.stopNote()
 square_synth.stopNote()
 saw_synth.stopNote()
 

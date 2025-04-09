@@ -8,6 +8,7 @@
 #include <memory>
 #include <Tonic.h>
 #include <mutex>
+#include <unordered_map>
 
 #define _USE_MATH_DEFINES  // Fix for M_PI on Windows
 #include <math.h>
@@ -47,10 +48,39 @@ protected:
     Tonic::ControlParameter noteNum, gate, noteVelocity;
 };
 
+class ControlParameters {
+public:
+    void addParameter(const std::string& name, float defaultValue = 0.0f) {
+        parameters.emplace_back(name, defaultValue);
+    }
+
+    const std::vector<std::pair<std::string, float>>& getParameters() const {
+        return parameters;
+    }
+
+private:
+    std::vector<std::pair<std::string, float>> parameters;
+};
+
 // Derived class implementing a simple ADSR filter synth
 class TonicSimpleADSRFilterSynth : public SynthWrapper {
 public:
-    TonicSimpleADSRFilterSynth(const std::string& waveform = "SineWave", float attack = 0.04, float decay = 0.1, float sustain = 0.8, float release = 0.6, float baseFilterFreq = 200.0, float filterQ = 1.0) {
+    TonicSimpleADSRFilterSynth(const std::string& waveform, ControlParameters& controlParams, const std::string& attackName, const std::string& decayName, float sustain, float release, float baseFilterFreq, float filterQ) {
+        // Add parameters to the synth
+        for (const auto& param : controlParams.getParameters()) {
+            parameters[param.first] = synth.addParameter(param.first, param.second);
+        }
+
+        // Get references to the attack and decay parameters
+        Tonic::ControlParameter& attackControl = parameters.at(attackName);
+        Tonic::ControlParameter& decayControl = parameters.at(decayName);
+
+        // Configure the synth
+        configureSynth(waveform, attackControl, decayControl, sustain, release, baseFilterFreq, filterQ);
+    }
+
+private:
+    void configureSynth(const std::string& waveform, Tonic::ControlGenerator attack, Tonic::ControlGenerator decay, float sustain, float release, float baseFilterFreq, float filterQ) {
         // Configure ADSR envelope
         env = Tonic::ADSR()
             .attack(attack)
@@ -80,11 +110,11 @@ public:
         synth.setOutputGen((tone * env) >> filter);
     }
 
-private:
     Tonic::ControlGenerator voiceFreq, filterFreq;
     Tonic::Generator tone;
     Tonic::ADSR env;
     Tonic::LPF24 filter;
+    std::unordered_map<std::string, Tonic::ControlParameter> parameters;
 };
 
 class AudioEngine {
@@ -166,7 +196,12 @@ PYBIND11_MODULE(audio_engine, m) {
     py::class_<SynthWrapper, std::shared_ptr<SynthWrapper>>(m, "SynthWrapper");
 
     py::class_<TonicSimpleADSRFilterSynth, SynthWrapper, std::shared_ptr<TonicSimpleADSRFilterSynth>>(m, "TonicSimpleADSRFilterSynth")
-        .def(py::init<const std::string&, float, float, float, float, float, float>())
+        .def(py::init<const std::string&, ControlParameters&, const std::string&, const std::string&, float, float, float, float>())
         .def("startNote", &TonicSimpleADSRFilterSynth::startNote)
         .def("stopNote", &TonicSimpleADSRFilterSynth::stopNote);
+
+    py::class_<ControlParameters, std::shared_ptr<ControlParameters>>(m, "ControlParameters")
+        .def(py::init<>())
+        .def("addParameter", &ControlParameters::addParameter)
+        .def("getParameters", &ControlParameters::getParameters, py::return_value_policy::reference);
 }
