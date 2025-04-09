@@ -93,16 +93,18 @@ class TonicSimpleADSRFilterSynth : public SynthWrapper {
 
 class ControlParameters {
 public:
-    void linkParameter(const std::string& synthName, const std::string& parameterName) {
-        linkedParameters[parameterName].push_back(synthName);
+    void linkParameter(const std::string& synthName, const std::string& synthParameterName, const std::string& controlParameterName) {
+        linkedParameters[controlParameterName].push_back(std::make_pair(synthName, synthParameterName));
     }
 
-    void updateParameter(const std::string& parameterName, float value) {
-        auto it = linkedParameters.find(parameterName);
+    void updateParameter(const std::string& controlParameterName, float value) {
+        auto it = linkedParameters.find(controlParameterName);
         if (it != linkedParameters.end()) {
-            for (const auto& synthName : it->second) {
+            for (const auto& pair : it->second) {
+                const std::string& synthName = pair.first;
+                const std::string& synthParameterName = pair.second;
                 if (synths.find(synthName) != synths.end()) {
-                    synths[synthName]->updateParameter(parameterName, value);
+                    synths[synthName]->updateParameter(synthParameterName, value);
                 }
             }
         }
@@ -113,8 +115,8 @@ public:
     }
 
 private:
-    std::unordered_map<std::string, std::vector<std::string>> linkedParameters; // parameterName -> list of synth names
-    std::unordered_map<std::string, std::shared_ptr<SynthWrapper>> synths;      // synthName -> synth instance
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> linkedParameters; // controlParameterName -> list of (synthName, synthParameterName)
+    std::unordered_map<std::string, std::shared_ptr<SynthWrapper>> synths;                              // synthName -> synth instance
 };
 
 
