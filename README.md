@@ -3,7 +3,7 @@
 > For the ones who dream of stranger worlds
 
 
-Let's build some strange audio procedurally which spook us well.
+Let's build some strange audio procedurally which spooks us well.
 
 
 ## How to get started
