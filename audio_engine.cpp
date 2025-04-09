@@ -21,6 +21,7 @@ class SynthWrapper {
     public:
         SynthWrapper() {
             noteNum = synth.addParameter("polyNote", 0.0);
+            pitchBend = synth.addParameter("pitchBend", 0.0);
             gate = synth.addParameter("polyGate", 0.0);
             noteVelocity = synth.addParameter("polyVelocity", 0.0);
         }
@@ -47,7 +48,47 @@ class SynthWrapper {
     
     protected:
         Tonic::Synth synth;
-        Tonic::ControlParameter noteNum, gate, noteVelocity;
+        Tonic::ControlParameter noteNum, gate, noteVelocity, pitchBend;
+    };
+
+// Derived class implementing a simple ADSR filter synth
+class TonicSimpleADSRFilterSynth : public SynthWrapper {
+    public:
+        TonicSimpleADSRFilterSynth(const std::string& waveform, float attack, float decay, float sustain, float release, float baseFilterFreq, float filterQ) {
+            configureSynth(waveform, attack, decay, sustain, release, baseFilterFreq, filterQ);
+        }
+    
+    private:
+        void configureSynth(const std::string& waveform, float attack, float decay, float sustain, float release, float baseFilterFreq, float filterQ) {
+            env = Tonic::ADSR()
+                .attack(attack)
+                .decay(decay)
+                .sustain(sustain)
+                .release(release)
+                .doesSustain(true)
+                .trigger(gate);
+    
+            voiceFreq = Tonic::ControlMidiToFreq().input(noteNum);
+            if (waveform == "SineWave") {
+                tone = Tonic::SineWave().freq(voiceFreq + pitchBend);
+            } else if (waveform == "SquareWave") {
+                tone = Tonic::SquareWave().freq(voiceFreq + pitchBend);
+            } else if (waveform == "SawtoothWave") {
+                tone = Tonic::SawtoothWave().freq(voiceFreq + pitchBend);
+            } else {
+                throw std::invalid_argument("Unsupported waveform type");
+            }
+    
+            filterFreq = voiceFreq * 0.5 + baseFilterFreq;
+            filter = Tonic::LPF24().Q(filterQ).cutoff(filterFreq);
+    
+            synth.setOutputGen((tone * env) >> filter);
+        }
+    
+        Tonic::ControlGenerator voiceFreq, filterFreq;
+        Tonic::Generator tone;
+        Tonic::ADSR env;
+        Tonic::LPF24 filter;
     };
 
 class ControlParameters {
@@ -76,45 +117,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<SynthWrapper>> synths;      // synthName -> synth instance
 };
 
-// Derived class implementing a simple ADSR filter synth
-class TonicSimpleADSRFilterSynth : public SynthWrapper {
-public:
-    TonicSimpleADSRFilterSynth(const std::string& waveform, float attack, float decay, float sustain, float release, float baseFilterFreq, float filterQ) {
-        configureSynth(waveform, attack, decay, sustain, release, baseFilterFreq, filterQ);
-    }
 
-private:
-    void configureSynth(const std::string& waveform, float attack, float decay, float sustain, float release, float baseFilterFreq, float filterQ) {
-        env = Tonic::ADSR()
-            .attack(attack)
-            .decay(decay)
-            .sustain(sustain)
-            .release(release)
-            .doesSustain(true)
-            .trigger(gate);
-
-        voiceFreq = Tonic::ControlMidiToFreq().input(noteNum);
-        if (waveform == "SineWave") {
-            tone = Tonic::SineWave().freq(voiceFreq);
-        } else if (waveform == "SquareWave") {
-            tone = Tonic::SquareWave().freq(voiceFreq);
-        } else if (waveform == "SawtoothWave") {
-            tone = Tonic::SawtoothWave().freq(voiceFreq);
-        } else {
-            throw std::invalid_argument("Unsupported waveform type");
-        }
-
-        filterFreq = voiceFreq * 0.5 + baseFilterFreq;
-        filter = Tonic::LPF24().Q(filterQ).cutoff(filterFreq);
-
-        synth.setOutputGen((tone * env) >> filter);
-    }
-
-    Tonic::ControlGenerator voiceFreq, filterFreq;
-    Tonic::Generator tone;
-    Tonic::ADSR env;
-    Tonic::LPF24 filter;
-};
 
 class AudioEngine {
 public:
