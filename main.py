@@ -27,6 +27,11 @@ square_synth.startNote(64, 0.5)  # E4
 time.sleep(1)
 saw_synth.startNote(67, 0.5)  # G4
 time.sleep(1)
+saw_synth.stopNote()
+square_synth.stopNote()
+time.sleep(1)
+sine_synth.startNote(58, 0.5)  # C4
+time.sleep(1)
 
 # Stop MIDI notes
 sine_synth.stopNote()
