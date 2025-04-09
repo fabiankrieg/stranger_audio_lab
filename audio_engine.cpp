@@ -15,41 +15,6 @@
 #define SAMPLE_RATE 48000
 #define BUFFER_SIZE 256
 
-// Singleton class for global control parameters
-class ControlParameters {
-public:
-    static ControlParameters& getInstance() {
-        static ControlParameters instance;
-        return instance;
-    }
-
-    void setAnxiety(float value) {
-        std::lock_guard<std::mutex> lock(mutex);
-        anxiety = std::min(std::max(value, 0.0f), 1.0f); // Ensure value is in range [0, 1]
-        for (auto& callback : anxietyCallbacks) {
-            callback(anxiety);
-        }
-    }
-
-    float getAnxiety() {
-        std::lock_guard<std::mutex> lock(mutex);
-        return anxiety;
-    }
-
-    void registerAnxietyCallback(const std::function<void(float)>& callback) {
-        std::lock_guard<std::mutex> lock(mutex);
-        anxietyCallbacks.push_back(callback);
-    }
-
-private:
-    ControlParameters() : anxiety(0.0f) {} // Default anxiety value
-    ControlParameters(const ControlParameters&) = delete;
-    ControlParameters& operator=(const ControlParameters&) = delete;
-
-    float anxiety;
-    std::mutex mutex;
-    std::vector<std::function<void(float)>> anxietyCallbacks; // List of callbacks for anxiety changes
-};
 
 // Wrapper class for Tonic::Synth
 class SynthWrapper {
@@ -196,9 +161,4 @@ PYBIND11_MODULE(audio_engine, m) {
         .def(py::init<>())
         .def("startNote", &SynthWrapper::startNote)
         .def("stopNote", &SynthWrapper::stopNote);
-
-    py::class_<ControlParameters>(m, "ControlParameters")
-        .def_static("getInstance", &ControlParameters::getInstance, py::return_value_policy::reference)
-        .def("setAnxiety", &ControlParameters::setAnxiety)
-        .def("getAnxiety", &ControlParameters::getAnxiety);
 }
