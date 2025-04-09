@@ -1,46 +1,57 @@
 import sys
 import time
 
-sys.path.insert(0, "bindings")  # Ensure Python can find the module
+sys.path.insert(0, "bindings")
 import audio_engine
 
-# Initialize the audio engine
-engine = audio_engine.AudioEngine()
+# Create ControlParameters
+control_params = audio_engine.ControlParameters()
 
-# Create multiple synthesizers
-sine_synth = audio_engine.SineSynth()
-square_synth = audio_engine.SquareSynth()
-tonic_square_synth = audio_engine.TonicSquareSynth()
+# Initialize the audio engine with ControlParameters
+engine = audio_engine.AudioEngine(control_params)
 
-# Register synthesizers with the audio engine
-engine.registerSynth(sine_synth)
-engine.registerSynth(square_synth)
-engine.registerSynth(tonic_square_synth)
+# Create and configure synthesizers
+square_synth = audio_engine.TonicSimpleADSRFilterSynth("SquareWave", 0.05, 0.1, 0.6, 0.4, 250.0, 1.0)
+saw_synth = audio_engine.TonicSimpleADSRFilterSynth("SawtoothWave", 0.05, 0.1, 0.6, 0.4, 250.0, 1.0)
+
+# Register synthesizers with the audio engine and link parameters
+engine.registerSynth("square_synth", square_synth)
+engine.registerSynth("saw_synth", saw_synth)
+#control_params.linkParameter("square_synth", "attack_control")
+#control_params.linkParameter("square_synth", "decay_control")
+control_params.linkParameter("square_synth", "pitchBend", "pitchbend")
+control_params.linkParameter("saw_synth", "pitchBend", "pitchbend")
 
 # Start audio playback
 engine.start()
 
-# Play notes with fall-off
-sine_synth.setFrequency(660.0)  # E5
-sine_synth.setFallOff(200.0)    # 0.2 seconds fall-off
-sine_synth.noteOn()
+# Play MIDI notes
+square_synth.startNote(64, 0.5)  # E4
+time.sleep(1)
+saw_synth.startNote(67, 0.5)  # G4
+time.sleep(1)
 
-square_synth.setFrequency(440.0)  # A4
-square_synth.setFallOff(200.0)   # 0.2 second fall-off
-square_synth.noteOn()
+# Smoothly transition pitchbend from 0 to 12 (E5 to E6) over 10 seconds
+print("Transitioning pitchbend from 0 to 12 (E5 to E6) over 10 seconds")
+for i in range(11):
+    pitchbend_value = i * 1.2  # Increment pitchbend value
+    control_params.updateParameter("pitchbend", pitchbend_value)  # Update pitchbend dynamically
+    time.sleep(1)
 
-tonic_square_synth.setFrequency(330.0)  # E4
-tonic_square_synth.setFallOff(200.0)    # 0.2 seconds fall-off
-tonic_square_synth.noteOn()
+# Dynamically modify parameters
+print("Modifying attack_control to 0.1 and decay_control to 0.2")
+control_params.updateParameter("attack_control", 0.1)
+control_params.updateParameter("decay_control", 0.2)
+time.sleep(1)
 
-time.sleep(2)
-sine_synth.noteOff()
-time.sleep(2)
+print("Modifying attack_control to 0.2 and decay_control to 0.3")
+control_params.updateParameter("attack_control", 0.2)
+control_params.updateParameter("decay_control", 0.3)
+time.sleep(1)
 
-tonic_square_synth.noteOff()
-time.sleep(2)
-square_synth.noteOff()
-time.sleep(2)
+# Stop MIDI notes
+square_synth.stopNote()
+saw_synth.stopNote()
 
 # Stop audio playback
 engine.stop()

@@ -7,6 +7,8 @@
 #include <vector>
 #include <memory>
 #include <Tonic.h>
+#include <mutex>
+#include <unordered_map>
 
 #define _USE_MATH_DEFINES  // Fix for M_PI on Windows
 #include <math.h>
@@ -14,113 +16,124 @@
 #define SAMPLE_RATE 48000
 #define BUFFER_SIZE 256
 
-class SimpleSynth {
-public:
-    virtual ~SimpleSynth() = default;
+// Base class for Tonic Synth Wrapper
+class SynthWrapper {
+    public:
+        SynthWrapper() {
+            noteNum = synth.addParameter("polyNote", 0.0);
+            pitchBend = synth.addParameter("pitchBend", 0.0);
+            gate = synth.addParameter("polyGate", 0.0);
+            noteVelocity = synth.addParameter("polyVelocity", 0.0);
+        }
+    
+        virtual ~SynthWrapper() = default;
+    
+        virtual void startNote(int midiNote, float amplitude) {
+            synth.setParameter("polyNote", static_cast<float>(midiNote));
+            synth.setParameter("polyGate", 1.0f);
+            synth.setParameter("polyVelocity", amplitude);
+        }
+    
+        virtual void stopNote() {
+            synth.setParameter("polyGate", 0.0f);
+        }
+    
+        virtual void updateParameter(const std::string& parameterName, float value) {
+            synth.setParameter(parameterName, value);
+        }
+    
+        Tonic::Synth& getSynth() {
+            return synth;
+        }
+    
+    protected:
+        Tonic::Synth synth;
+        Tonic::ControlParameter noteNum, gate, noteVelocity, pitchBend;
+    };
 
-    void setFrequency(float newFreq) {
-        frequency.store(newFreq, std::memory_order_relaxed);
-    }
-
-    void setFallOff(float newFallOffTimeMs) {
-        fallOffTimeMs.store(newFallOffTimeMs, std::memory_order_relaxed);
-    }
-
-    void noteOn() {
-        amplitude.store(1.0f, std::memory_order_relaxed); // Start playback at full amplitude
-        isOn.store(true, std::memory_order_relaxed);      // Set state to "on"
-    }
-
-    void noteOff() {
-        isOn.store(false, std::memory_order_relaxed);     // Set state to "off"
-    }
-
-    void generateBlock(float* buffer, unsigned int nFrames) {
-        float currentAmplitude = amplitude.load(std::memory_order_relaxed);
-        float fallOffRate = 1.0f / (fallOffTimeMs.load(std::memory_order_relaxed) / 1000.0f * SAMPLE_RATE); // Linear decay per sample
-        bool synthIsOn = isOn.load(std::memory_order_relaxed);
-
-        // Generate audio for the sample window
-        generateSamples(buffer, nFrames);
-
-        // Apply amplitude and fall-off
-        for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] *= currentAmplitude * 0.2f;
-
-            // Gradually reduce amplitude only if the synth is "off"
-            if (!synthIsOn && currentAmplitude > 0.0f) {
-                currentAmplitude -= fallOffRate;
-                if (currentAmplitude < 0.0f) currentAmplitude = 0.0f; // Stop completely if it goes below zero
+// Derived class implementing a simple ADSR filter synth
+class TonicSimpleADSRFilterSynth : public SynthWrapper {
+    public:
+        TonicSimpleADSRFilterSynth(const std::string& waveform, float attack, float decay, float sustain, float release, float baseFilterFreq, float filterQ) {
+            configureSynth(waveform, attack, decay, sustain, release, baseFilterFreq, filterQ);
+        }
+    
+    private:
+        void configureSynth(const std::string& waveform, float attack, float decay, float sustain, float release, float baseFilterFreq, float filterQ) {
+            env = Tonic::ADSR()
+                .attack(attack)
+                .decay(decay)
+                .sustain(sustain)
+                .release(release)
+                .doesSustain(true)
+                .trigger(gate);
+    
+            voiceFreq = Tonic::ControlMidiToFreq().input(noteNum);
+            if (waveform == "SineWave") {
+                tone = Tonic::SineWave().freq(voiceFreq + pitchBend);
+            } else if (waveform == "SquareWave") {
+                tone = Tonic::SquareWave().freq(voiceFreq + pitchBend);
+            } else if (waveform == "SawtoothWave") {
+                tone = Tonic::SawtoothWave().freq(voiceFreq + pitchBend);
+            } else {
+                throw std::invalid_argument("Unsupported waveform type");
             }
+    
+            filterFreq = voiceFreq * 0.5 + baseFilterFreq;
+            filter = Tonic::LPF24().Q(filterQ).cutoff(filterFreq);
+    
+            synth.setOutputGen((tone * env) >> filter);
         }
+    
+        Tonic::ControlGenerator voiceFreq, filterFreq;
+        Tonic::Generator tone;
+        Tonic::ADSR env;
+        Tonic::LPF24 filter;
+    };
 
-        amplitude.store(currentAmplitude, std::memory_order_relaxed);
-    }
-
-protected:
-    virtual void generateSamples(float* buffer, unsigned int nFrames) = 0; // Pure virtual function for generating a block of samples
-
-    std::atomic<float> frequency{440.0f};
-    std::atomic<float> amplitude{0.0f}; // Current amplitude of the synth
-    std::atomic<float> fallOffTimeMs{1000.0f}; // Fall-off time in milliseconds
-    std::atomic<bool> isOn{false};       // Tracks whether the synth is "on" or "off"
-    float phase{0.0f};
-};
-
-class SineSynth : public SimpleSynth {
-protected:
-    void generateSamples(float* buffer, unsigned int nFrames) override {
-        float phaseStep = (2.0f * M_PI * frequency.load(std::memory_order_relaxed)) / SAMPLE_RATE;
-
-        for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] = std::sin(phase);
-            phase += phaseStep;
-            if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
-        }
-    }
-};
-
-class SquareSynth : public SimpleSynth {
-protected:
-    void generateSamples(float* buffer, unsigned int nFrames) override {
-        float phaseStep = (2.0f * M_PI * frequency.load(std::memory_order_relaxed)) / SAMPLE_RATE;
-
-        for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] = (phase < M_PI) ? 1.0f : -1.0f;
-            phase += phaseStep;
-            if (phase > 2.0f * M_PI) phase -= 2.0f * M_PI;
-        }
-    }
-};
-
-class TonicSquareSynth : public SimpleSynth {
+class ControlParameters {
 public:
-    TonicSquareSynth() {
-        generator = Tonic::RectWave();
-        synth.setOutputGen(generator);
+    void linkParameter(const std::string& synthName, const std::string& synthParameterName, const std::string& controlParameterName) {
+        linkedParameters[controlParameterName].push_back(std::make_pair(synthName, synthParameterName));
     }
 
-protected:
-    void generateSamples(float* buffer, unsigned int nFrames) override {
-        generator.freq(frequency.load(std::memory_order_relaxed)); // Update frequency
-        synth.fillBufferOfFloats(buffer, nFrames, 1); // Generate a block of samples
+    void updateParameter(const std::string& controlParameterName, float value) {
+        auto it = linkedParameters.find(controlParameterName);
+        if (it != linkedParameters.end()) {
+            for (const auto& pair : it->second) {
+                const std::string& synthName = pair.first;
+                const std::string& synthParameterName = pair.second;
+                if (synths.find(synthName) != synths.end()) {
+                    synths[synthName]->updateParameter(synthParameterName, value);
+                }
+            }
+        } else {
+            std::cerr << "Warning: Attempted to update non-existent ControlParameter '" 
+                      << controlParameterName << "'." << std::endl;
+        }
+    }
+
+    void registerSynth(const std::string& name, std::shared_ptr<SynthWrapper> synth) {
+        synths[name] = synth;
     }
 
 private:
-    Tonic::RectWave generator; // Tonic square wave generator
-    Tonic::Synth synth;        // Tonic synth to manage the generator
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> linkedParameters; // controlParameterName -> list of (synthName, synthParameterName)
+    std::unordered_map<std::string, std::shared_ptr<SynthWrapper>> synths;                              // synthName -> synth instance
 };
+
+
 
 class AudioEngine {
 public:
-    AudioEngine() : dac(nullptr) {}
+    AudioEngine(ControlParameters& controlParams) : dac(nullptr), controlParams(controlParams) {}
 
     ~AudioEngine() {
         stop();
     }
 
     void start() {
-        if (dac) return; // Already running
+        if (dac) return;
 
         dac = new RtAudio();
         if (dac->getDeviceCount() == 0) {
@@ -157,8 +170,10 @@ public:
         }
     }
 
-    void registerSynth(std::shared_ptr<SimpleSynth> synth) {
+    void registerSynth(const std::string& name, std::shared_ptr<SynthWrapper> synth) {
+        mixer.addInput(synth->getSynth());
         synths.push_back(synth);
+        controlParams.registerSynth(name, synth);
     }
 
 private:
@@ -166,44 +181,35 @@ private:
         auto* engine = static_cast<AudioEngine*>(userData);
         auto* buffer = static_cast<float*>(outputBuffer);
 
-        // Clear the buffer
-        for (unsigned int i = 0; i < nFrames; i++) {
-            buffer[i] = 0.0f;
-        }
-
-        // Let each synth add its output to the buffer
-        for (const auto& synth : engine->synths) {
-            synth->generateBlock(buffer, nFrames);
-        }
+        engine->mixer.fillBufferOfFloats(buffer, nFrames, 1);
 
         return 0;
     }
 
     RtAudio* dac;
-    std::vector<std::shared_ptr<SimpleSynth>> synths; // Store multiple synthesizers
+    Tonic::Mixer mixer;
+    std::vector<std::shared_ptr<SynthWrapper>> synths;
+    ControlParameters& controlParams;
 };
 
 namespace py = pybind11;
 
 PYBIND11_MODULE(audio_engine, m) {
-    py::class_<SimpleSynth, std::shared_ptr<SimpleSynth>>(m, "SimpleSynth")
-        .def("setFrequency", &SimpleSynth::setFrequency)
-        .def("setFallOff", &SimpleSynth::setFallOff)
-        .def("noteOn", &SimpleSynth::noteOn)
-        .def("noteOff", &SimpleSynth::noteOff);
-
-    py::class_<SineSynth, SimpleSynth, std::shared_ptr<SineSynth>>(m, "SineSynth")
-        .def(py::init<>());
-
-    py::class_<SquareSynth, SimpleSynth, std::shared_ptr<SquareSynth>>(m, "SquareSynth")
-        .def(py::init<>());
-
-    py::class_<TonicSquareSynth, SimpleSynth, std::shared_ptr<TonicSquareSynth>>(m, "TonicSquareSynth")
-        .def(py::init<>());
-
     py::class_<AudioEngine>(m, "AudioEngine")
-        .def(py::init<>())
+        .def(py::init<ControlParameters&>())
         .def("start", &AudioEngine::start)
         .def("stop", &AudioEngine::stop)
         .def("registerSynth", &AudioEngine::registerSynth);
+
+    py::class_<SynthWrapper, std::shared_ptr<SynthWrapper>>(m, "SynthWrapper");
+
+    py::class_<TonicSimpleADSRFilterSynth, SynthWrapper, std::shared_ptr<TonicSimpleADSRFilterSynth>>(m, "TonicSimpleADSRFilterSynth")
+        .def(py::init<const std::string&, float, float, float, float, float, float>())
+        .def("startNote", &TonicSimpleADSRFilterSynth::startNote)
+        .def("stopNote", &TonicSimpleADSRFilterSynth::stopNote);
+
+    py::class_<ControlParameters, std::shared_ptr<ControlParameters>>(m, "ControlParameters")
+        .def(py::init<>())
+        .def("linkParameter", &ControlParameters::linkParameter)
+        .def("updateParameter", &ControlParameters::updateParameter);
 }
