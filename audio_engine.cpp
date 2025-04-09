@@ -16,72 +16,75 @@
 #define SAMPLE_RATE 48000
 #define BUFFER_SIZE 256
 
-
 // Base class for Tonic Synth Wrapper
 class SynthWrapper {
-public:
-    SynthWrapper() {
-        // Add parameters to the synth
-        noteNum = synth.addParameter("polyNote", 0.0);
-        gate = synth.addParameter("polyGate", 0.0);
-        noteVelocity = synth.addParameter("polyVelocity", 0.0);
-    }
-
-    virtual ~SynthWrapper() = default;
-
-    virtual void startNote(int midiNote, float amplitude) {
-        synth.setParameter("polyNote", static_cast<float>(midiNote));
-        synth.setParameter("polyGate", 1.0f);
-        synth.setParameter("polyVelocity", amplitude);
-    }
-
-    virtual void stopNote() {
-        synth.setParameter("polyGate", 0.0f);
-    }
-
-    Tonic::Synth& getSynth() {
-        return synth;
-    }
-
-protected:
-    Tonic::Synth synth;
-    Tonic::ControlParameter noteNum, gate, noteVelocity;
-};
+    public:
+        SynthWrapper() {
+            noteNum = synth.addParameter("polyNote", 0.0);
+            gate = synth.addParameter("polyGate", 0.0);
+            noteVelocity = synth.addParameter("polyVelocity", 0.0);
+        }
+    
+        virtual ~SynthWrapper() = default;
+    
+        virtual void startNote(int midiNote, float amplitude) {
+            synth.setParameter("polyNote", static_cast<float>(midiNote));
+            synth.setParameter("polyGate", 1.0f);
+            synth.setParameter("polyVelocity", amplitude);
+        }
+    
+        virtual void stopNote() {
+            synth.setParameter("polyGate", 0.0f);
+        }
+    
+        virtual void updateParameter(const std::string& parameterName, float value) {
+            synth.setParameter(parameterName, value);
+        }
+    
+        Tonic::Synth& getSynth() {
+            return synth;
+        }
+    
+    protected:
+        Tonic::Synth synth;
+        Tonic::ControlParameter noteNum, gate, noteVelocity;
+    };
 
 class ControlParameters {
 public:
-    void addParameter(const std::string& name, float defaultValue = 0.0f) {
-        parameters.emplace_back(name, defaultValue);
+    void linkParameter(const std::string& synthName, const std::string& parameterName) {
+        linkedParameters[parameterName].push_back(synthName);
     }
 
-    const std::vector<std::pair<std::string, float>>& getParameters() const {
-        return parameters;
+    void updateParameter(const std::string& parameterName, float value) {
+        auto it = linkedParameters.find(parameterName);
+        if (it != linkedParameters.end()) {
+            for (const auto& synthName : it->second) {
+                if (synths.find(synthName) != synths.end()) {
+                    synths[synthName]->updateParameter(parameterName, value);
+                }
+            }
+        }
+    }
+
+    void registerSynth(const std::string& name, std::shared_ptr<SynthWrapper> synth) {
+        synths[name] = synth;
     }
 
 private:
-    std::vector<std::pair<std::string, float>> parameters;
+    std::unordered_map<std::string, std::vector<std::string>> linkedParameters; // parameterName -> list of synth names
+    std::unordered_map<std::string, std::shared_ptr<SynthWrapper>> synths;      // synthName -> synth instance
 };
 
 // Derived class implementing a simple ADSR filter synth
 class TonicSimpleADSRFilterSynth : public SynthWrapper {
 public:
-    TonicSimpleADSRFilterSynth(const std::string& waveform, ControlParameters& controlParams, const std::string& attackName, const std::string& decayName, float sustain, float release, float baseFilterFreq, float filterQ) {
-        // Add parameters to the synth
-        for (const auto& param : controlParams.getParameters()) {
-            parameters[param.first] = synth.addParameter(param.first, param.second);
-        }
-
-        // Get references to the attack and decay parameters
-        Tonic::ControlParameter& attackControl = parameters.at(attackName);
-        Tonic::ControlParameter& decayControl = parameters.at(decayName);
-
-        // Configure the synth
-        configureSynth(waveform, attackControl, decayControl, sustain, release, baseFilterFreq, filterQ);
+    TonicSimpleADSRFilterSynth(const std::string& waveform, float attack, float decay, float sustain, float release, float baseFilterFreq, float filterQ) {
+        configureSynth(waveform, attack, decay, sustain, release, baseFilterFreq, filterQ);
     }
 
 private:
-    void configureSynth(const std::string& waveform, Tonic::ControlGenerator attack, Tonic::ControlGenerator decay, float sustain, float release, float baseFilterFreq, float filterQ) {
-        // Configure ADSR envelope
+    void configureSynth(const std::string& waveform, float attack, float decay, float sustain, float release, float baseFilterFreq, float filterQ) {
         env = Tonic::ADSR()
             .attack(attack)
             .decay(decay)
@@ -90,7 +93,6 @@ private:
             .doesSustain(true)
             .trigger(gate);
 
-        // Configure waveform
         voiceFreq = Tonic::ControlMidiToFreq().input(noteNum);
         if (waveform == "SineWave") {
             tone = Tonic::SineWave().freq(voiceFreq);
@@ -102,11 +104,9 @@ private:
             throw std::invalid_argument("Unsupported waveform type");
         }
 
-        // Configure filter
         filterFreq = voiceFreq * 0.5 + baseFilterFreq;
         filter = Tonic::LPF24().Q(filterQ).cutoff(filterFreq);
 
-        // Set output generator
         synth.setOutputGen((tone * env) >> filter);
     }
 
@@ -114,19 +114,18 @@ private:
     Tonic::Generator tone;
     Tonic::ADSR env;
     Tonic::LPF24 filter;
-    std::unordered_map<std::string, Tonic::ControlParameter> parameters;
 };
 
 class AudioEngine {
 public:
-    AudioEngine() : dac(nullptr) {}
+    AudioEngine(ControlParameters& controlParams) : dac(nullptr), controlParams(controlParams) {}
 
     ~AudioEngine() {
         stop();
     }
 
     void start() {
-        if (dac) return; // Already running
+        if (dac) return;
 
         dac = new RtAudio();
         if (dac->getDeviceCount() == 0) {
@@ -163,9 +162,10 @@ public:
         }
     }
 
-    void registerSynth(std::shared_ptr<SynthWrapper> synth) {
+    void registerSynth(const std::string& name, std::shared_ptr<SynthWrapper> synth) {
         mixer.addInput(synth->getSynth());
         synths.push_back(synth);
+        controlParams.registerSynth(name, synth);
     }
 
 private:
@@ -173,22 +173,22 @@ private:
         auto* engine = static_cast<AudioEngine*>(userData);
         auto* buffer = static_cast<float*>(outputBuffer);
 
-        // Use the mixer to fill the buffer with mixed audio
         engine->mixer.fillBufferOfFloats(buffer, nFrames, 1);
 
         return 0;
     }
 
     RtAudio* dac;
-    Tonic::Mixer mixer; // Mixer to combine signals from all synths
-    std::vector<std::shared_ptr<SynthWrapper>> synths; // Store multiple SynthWrapper instances
+    Tonic::Mixer mixer;
+    std::vector<std::shared_ptr<SynthWrapper>> synths;
+    ControlParameters& controlParams;
 };
 
 namespace py = pybind11;
 
 PYBIND11_MODULE(audio_engine, m) {
     py::class_<AudioEngine>(m, "AudioEngine")
-        .def(py::init<>())
+        .def(py::init<ControlParameters&>())
         .def("start", &AudioEngine::start)
         .def("stop", &AudioEngine::stop)
         .def("registerSynth", &AudioEngine::registerSynth);
@@ -196,12 +196,12 @@ PYBIND11_MODULE(audio_engine, m) {
     py::class_<SynthWrapper, std::shared_ptr<SynthWrapper>>(m, "SynthWrapper");
 
     py::class_<TonicSimpleADSRFilterSynth, SynthWrapper, std::shared_ptr<TonicSimpleADSRFilterSynth>>(m, "TonicSimpleADSRFilterSynth")
-        .def(py::init<const std::string&, ControlParameters&, const std::string&, const std::string&, float, float, float, float>())
+        .def(py::init<const std::string&, float, float, float, float, float, float>())
         .def("startNote", &TonicSimpleADSRFilterSynth::startNote)
         .def("stopNote", &TonicSimpleADSRFilterSynth::stopNote);
 
     py::class_<ControlParameters, std::shared_ptr<ControlParameters>>(m, "ControlParameters")
         .def(py::init<>())
-        .def("addParameter", &ControlParameters::addParameter)
-        .def("getParameters", &ControlParameters::getParameters, py::return_value_policy::reference);
+        .def("linkParameter", &ControlParameters::linkParameter)
+        .def("updateParameter", &ControlParameters::updateParameter);
 }
