@@ -107,6 +107,9 @@ public:
                     synths[synthName]->updateParameter(synthParameterName, value);
                 }
             }
+        } else {
+            std::cerr << "Warning: Attempted to update non-existent ControlParameter '" 
+                      << controlParameterName << "'." << std::endl;
         }
     }
 
