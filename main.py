@@ -1,50 +1,37 @@
 import sys
 import time
 
-sys.path.insert(0, "bindings")  # Ensure Python can find the module
+sys.path.insert(0, "bindings")
 import audio_engine
 
 # Initialize the audio engine
 engine = audio_engine.AudioEngine()
 
-# Create SynthWrapper instances
-sine_synth = audio_engine.SynthWrapper()
-square_synth = audio_engine.SynthWrapper()
-tonic_square_synth = audio_engine.SynthWrapper()
+# Create and configure synthesizers using the constructor
+sine_synth = audio_engine.SynthWrapper("SineWave", 0.05, 0.1, 0.7, 0.5, 300.0, 1.2)
+square_synth = audio_engine.SynthWrapper("SquareWave", 0.02, 0.2, 0.6, 0.4, 250.0, 1.0)
+saw_synth = audio_engine.SynthWrapper("SawtoothWave", 0.03, 0.15, 0.8, 0.6, 200.0, 0.8)
 
 # Register synthesizers with the audio engine
 engine.registerSynth(sine_synth)
 engine.registerSynth(square_synth)
-engine.registerSynth(tonic_square_synth)
+engine.registerSynth(saw_synth)
 
 # Start audio playback
 engine.start()
 
 # Play MIDI notes
-sine_synth.startNote(64, 0.2)  # E5 (MIDI note 76) with amplitude 0.5
+sine_synth.startNote(60, 0.5)  # C4
 time.sleep(1)
-print("1")
-sine_synth.startNote(63, 0.2)  # E5 (MIDI note 76) with amplitude 0.5
+square_synth.startNote(64, 0.5)  # E4
 time.sleep(1)
-print("1")
-sine_synth.startNote(65, 0.55)
+saw_synth.startNote(67, 0.5)  # G4
 time.sleep(1)
-print("1")
-sine_synth.startNote(63, 0.1)
-time.sleep(1)
-
-# square_synth.startNote(69, 0.5)  # A4 (MIDI note 69) with amplitude 0.5
-# time.sleep(2)
-# tonic_square_synth.startNote(64, 0.5)  # E4 (MIDI note 64) with amplitude 0.5
-
-# time.sleep(2)
 
 # Stop MIDI notes
 sine_synth.stopNote()
 square_synth.stopNote()
-tonic_square_synth.stopNote()
-
-# time.sleep(2)
+saw_synth.stopNote()
 
 # Stop audio playback
 engine.stop()

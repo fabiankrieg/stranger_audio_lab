@@ -19,42 +19,49 @@
 // Wrapper class for Tonic::Synth
 class SynthWrapper {
 public:
-    SynthWrapper() {
-        // Adapted from https://github.com/Dewb/Tonic/blob/midi/Demo/Standalone/PolyMIDIDemo/main.cpp
-        
+    SynthWrapper(const std::string& waveform = "SineWave", float attack = 0.04, float decay = 0.1, float sustain = 0.8, float release = 0.6, float baseFilterFreq = 200.0, float filterQ = 1.0) {
+        // Add parameters to the synth
         noteNum = synth.addParameter("polyNote", 0.0);
         gate = synth.addParameter("polyGate", 0.0);
         noteVelocity = synth.addParameter("polyVelocity", 0.0);
-        voiceNumber = synth.addParameter("polyVoiceNumber", 0.0);
 
-        voiceFreq = Tonic::ControlMidiToFreq().input(noteNum);
-
-        tone = (Tonic::Generator)(noteVelocity * Tonic::SquareWave().freq(voiceFreq) * Tonic::SineWave().freq(50));
-
+        // Configure ADSR envelope
         env = Tonic::ADSR()
-        .attack(0.04)
-        .decay( 0.1 )
-        .sustain(0.8)
-        .release(0.6)
-        .doesSustain(true)
-        .trigger(gate);
+            .attack(attack)
+            .decay(decay)
+            .sustain(sustain)
+            .release(release)
+            .doesSustain(true)
+            .trigger(gate);
 
-        filterFreq = voiceFreq * 0.5 + 200;
-    
-        filter = Tonic::LPF24().Q(1.0 + noteVelocity * 0.02).cutoff( filterFreq );
+        // Configure waveform
+        voiceFreq = Tonic::ControlMidiToFreq().input(noteNum);
+        if (waveform == "SineWave") {
+            tone = Tonic::SineWave().freq(voiceFreq);
+        } else if (waveform == "SquareWave") {
+            tone = Tonic::SquareWave().freq(voiceFreq);
+        } else if (waveform == "SawtoothWave") {
+            tone = Tonic::SawtoothWave().freq(voiceFreq);
+        } else {
+            throw std::invalid_argument("Unsupported waveform type");
+        }
 
-        synth.setOutputGen((((tone * env) >> filter)));
+        // Configure filter
+        filterFreq = voiceFreq * 0.5 + baseFilterFreq;
+        filter = Tonic::LPF24().Q(filterQ).cutoff(filterFreq);
 
+        // Set output generator
+        synth.setOutputGen((tone * env) >> filter);
     }
 
     void startNote(int midiNote, float amplitude) {
-        synth.setParameter("polyNote",static_cast<float>(midiNote)); // Update the midiNote parameter
-        synth.setParameter("polyGate",static_cast<float>(1.0f)); 
-        synth.setParameter("polyVelocity",static_cast<float>(amplitude)); 
+        synth.setParameter("polyNote", static_cast<float>(midiNote));
+        synth.setParameter("polyGate", 1.0f);
+        synth.setParameter("polyVelocity", amplitude);
     }
 
     void stopNote() {
-        synth.setParameter("polyGate",static_cast<float>(0.0f)); 
+        synth.setParameter("polyGate", 0.0f);
     }
 
     Tonic::Synth& getSynth() {
@@ -63,22 +70,11 @@ public:
 
 private:
     Tonic::Synth synth;
-    Tonic::SawtoothWave sawWave; // Changed from RectWave to SawtoothWave
-    Tonic::ControlParameter ampParam;
-    Tonic::ControlParameter midiNoteParam; // ControlParameter for MIDI note
-    Tonic::ControlParameter anxietyControl; // ControlParameter for anxiety
-
-    Tonic::ControlParameter noteNum;
-    Tonic::ControlParameter gate;
-    Tonic::ControlParameter noteVelocity;
-    Tonic::ControlParameter voiceNumber;
-    Tonic::ControlGenerator voiceFreq;
+    Tonic::ControlParameter noteNum, gate, noteVelocity;
+    Tonic::ControlGenerator voiceFreq, filterFreq;
     Tonic::Generator tone;
     Tonic::ADSR env;
     Tonic::LPF24 filter;
-    Tonic::ControlGenerator filterFreq;
-    Tonic::ControlGenerator output;
-
 };
 
 class AudioEngine {
@@ -158,7 +154,7 @@ PYBIND11_MODULE(audio_engine, m) {
         .def("registerSynth", &AudioEngine::registerSynth);
 
     py::class_<SynthWrapper, std::shared_ptr<SynthWrapper>>(m, "SynthWrapper")
-        .def(py::init<>())
+        .def(py::init<const std::string&, float, float, float, float, float, float>()) // Updated constructor
         .def("startNote", &SynthWrapper::startNote)
         .def("stopNote", &SynthWrapper::stopNote);
 }
