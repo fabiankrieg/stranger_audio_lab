@@ -12,7 +12,7 @@ import audio_engine
 control_params = audio_engine.ControlParameters()
 
 # Initialize the RandomNoteSong with ControlParameters and BPM
-bpm = 120  # Beats per minute
+bpm = 250  # Beats per minute
 # song = RandomNoteSong(control_params, bpm)
 song = SimpleMultiPartSong(control_params, bpm)
 
