@@ -5,10 +5,13 @@ class StrangerPart:
     This class provides an interface for handling transitions between parts of a composition,
     retrieving the name of the current part, and obtaining the associated note generator.
 
+    Attributes:
+        control_params (audio_engine.ControlParameters): An instance of ControlParameters
+            for managing and updating synthesizer parameters.
+
     Interface:
-        - get_next_part(): Determines the next part to transition to. Returns None to replay
-          the current part or a string identifying another part.
-        - get_part_name(): Returns the name of the current part as a string.
+        - get_next_part(): Determines the next part to transition to.
+        - get_part_name(): Returns the name of the current part.
         - get_note_generator(): Returns the note generator associated with the current part.
 
     Subclassing:
@@ -43,6 +46,15 @@ class StrangerPart:
             Raises:
                 NotImplementedError: If the method is not implemented in a subclass.
     """
+
+    def __init__(self, control_params):
+        """
+        Initializes the StrangerPart with an instance of ControlParameters.
+
+        Args:
+            control_params (audio_engine.ControlParameters): An instance of ControlParameters.
+        """
+        self.control_params = control_params
 
     def get_next_part(self):
         """

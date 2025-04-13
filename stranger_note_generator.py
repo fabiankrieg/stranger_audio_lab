@@ -6,9 +6,15 @@ class StrangerNoteGenerator:
     for synthesizers. Subclasses should implement the `get_next_notes` method to define
     the specific behavior of the note generation.
 
+    Attributes:
+        control_params (audio_engine.ControlParameters): An instance of ControlParameters
+            for managing and updating synthesizer parameters.
+
     Interface:
         - get_next_notes(): Returns a list of dictionaries, where each dictionary
           represents a set of operations to be performed on synthesizers.
+        - get_part_end(): Returns a boolean indicating whether the current part has ended
+          and a transition to the next part should be triggered.
 
     Note Format:
         Each entry in the list returned by `get_next_notes` is a dictionary with the
@@ -44,6 +50,15 @@ class StrangerNoteGenerator:
         Subclasses should override the `get_next_notes` method to implement custom
         note generation logic.
     """
+
+    def __init__(self, control_params):
+        """
+        Initializes the StrangerNoteGenerator with an instance of ControlParameters.
+
+        Args:
+            control_params (audio_engine.ControlParameters): An instance of ControlParameters.
+        """
+        self.control_params = control_params
 
     def get_next_notes(self):
         """
