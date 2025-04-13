@@ -30,20 +30,26 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
         self._beats_per_bar = beats_per_bar
         self._note_value = note_value
         self._subdivision = subdivision
+        self._subdivision_counter = 0
         self._beat_counter = 0
         self._bar_counter = 0
         self._repetition_counter = 0
-        self._on_beat = False
+        self._on_beat = True
 
     def _update_beat(self):
         """
         Updates the beat, bar, and repetition counters based on the current state.
         """
         total_beats_in_bar = self._beats_per_bar[self._bar_counter]
-        self._beat_counter += 1
+
+        self._subdivision_counter += 1
 
         # Update on_beat
-        self._on_beat = (self._beat_counter % (self._subdivision // self._note_value)) == 0
+        if  self._subdivision_counter // self._note_value == 0:
+            self._on_beat = True
+            self._beat_counter += 1
+        else:
+            self._on_beat = False
 
         # Move to the next bar if the current bar is complete
         if self._beat_counter >= total_beats_in_bar:
@@ -54,6 +60,7 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
             if self._bar_counter >= len(self._beats_per_bar):
                 self._bar_counter = 0
                 self._repetition_counter += 1
+
 
     def get_current_beat(self):
         """
@@ -78,9 +85,21 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
             list: A list of dictionaries, where each dictionary represents a set of
                   operations to be performed on synthesizers.
         """
-        self._update_beat()  # Update the beat before generating notes
+        new_notes = self._get_next_notes()
+        self._update_beat()  # Update the beat after generating notes
         # Example implementation: Always return an empty list for now
-        return []
+        return new_notes
+
+    def _get_next_notes(self):
+        """
+        Generate the next set of notes and operations for synthesizers.
+
+        Returns:
+            list: A list of dictionaries, where each dictionary represents a set of
+                  operations to be performed on synthesizers.
+        """
+        # Placeholder for actual note generation logic
+        raise NotImplementedError("Subclasses must implement the `_get_next_notes` method.")
 
     def get_part_end(self):
         """
