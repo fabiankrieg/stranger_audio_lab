@@ -39,11 +39,13 @@ class NoteGeneratorPatternScaleBased(StrangerNoteGeneratorBarBased):
             return []
 
     def get_part_end(self):
-        on_beat, beat_counter, bar_counter, repetition_counter, max_beat, max_bar = self.get_current_beat()
+        part_can_end = super().get_part_can_end()
 
-        if on_beat and beat_counter == 0 and bar_counter == 0 and repetition_counter > 0 and repetition_counter % 4 == 0:
-            # Trigger part end and allow next part to play instead of this
-            return True
+        if part_can_end:
+            on_beat, beat_counter, bar_counter, repetition_counter, max_beat, max_bar = self.get_current_beat()
+            if repetition_counter > 0: # play at least twice
+                # Trigger part end and allow next part to play instead of this
+                return True
         return False
 
 
@@ -89,11 +91,17 @@ class SimpleMultiPartSong(StrangerBPMSong):
         }
         self._max_division = max_division
 
+        self._current_part_index = 0
+
     def get_first_part(self):
-        return SimplePart(self._control_params, self._synth_name, "SimplePart", self._max_division)
+        # Generate new part
+        return SimplePart(self._control_params, self._synth_name, "SimplePart" + str(self._current_part_index), self._max_division)
 
     def get_synthesizers(self):
         return self._synthesizers
     
     def get_next_part(self, current_part_name):
-        return SimplePart(self._control_params, self._synth_name, "SimplePart", self._max_division)
+        # Generate new part
+        self._current_part_index += 1
+        print("Starting new part: " + str(self._current_part_index))
+        return SimplePart(self._control_params, self._synth_name, "SimplePart" + str(self._current_part_index), self._max_division)
