@@ -68,7 +68,7 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
                 - int: `max_beat` indicating the last beat within the bar.
                 - int: `max_bar` indicating the last bar in the sequence.
         """
-        return self._on_beat, self._beat_counter + 1, self._bar_counter + 1, self._repetition_counter
+        return self._on_beat, self._beat_counter + 1, self._bar_counter + 1, self._repetition_counter, self._beats_per_bar[self._bar_counter], len(self._beats_per_bar)
 
     def get_next_notes(self):
         """
