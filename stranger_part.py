@@ -23,7 +23,8 @@ class StrangerPart:
             Determines the next part to transition to.
 
             Returns:
-                str or None: The name of the next part as a string, or None to replay the current part.
+                str or None: The name of the next part as a string, "end" to mark the end of the song,
+                             or None to replay the current part.
 
             Raises:
                 NotImplementedError: If the method is not implemented in a subclass.
@@ -61,7 +62,8 @@ class StrangerPart:
         Determines the next part to transition to.
 
         Returns:
-            str or None: The name of the next part as a string, or None to replay the current part.
+            str or None: The name of the next part as a string, "end" to mark the end of the song,
+                         or None to replay the current part.
 
         Raises:
             NotImplementedError: If the method is not implemented in a subclass.

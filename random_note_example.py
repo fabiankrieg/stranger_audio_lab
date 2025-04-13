@@ -1,5 +1,5 @@
 import random
-from stranger_ensemble import StrangerBPMEnsemble
+from stranger_song import StrangerBPMSong
 from stranger_part import StrangerPart
 from stranger_note_generator import StrangerNoteGenerator
 from audio_engine import TonicSimpleADSRFilterSynth
@@ -90,18 +90,18 @@ class RandomNotePart(StrangerPart):
         return self.note_generator
 
 
-class RandomNoteEnsemble(StrangerBPMEnsemble):
+class RandomNoteSong(StrangerBPMSong):
     """
-    An ensemble that creates a single square wave synthesizer and uses a RandomNotePart.
+    A song that creates a single square wave synthesizer and uses a RandomNotePart.
     """
 
     def __init__(self, control_params, bpm):
         """
-        Initializes the RandomNoteEnsemble.
+        Initializes the RandomNoteSong.
 
         Args:
             control_params (audio_engine.ControlParameters): An instance of ControlParameters.
-            bpm (float): Beats per minute for the composition.
+            bpm (float): Beats per minute for the song.
         """
         super().__init__(control_params, bpm, max_division=16)
         self.synth_name = "square_synth"
@@ -112,16 +112,16 @@ class RandomNoteEnsemble(StrangerBPMEnsemble):
 
     def get_first_part(self):
         """
-        Returns the first part of the composition.
+        Returns the first part of the song.
 
         Returns:
-            RandomNotePart: The first part of the composition.
+            RandomNotePart: The first part of the song.
         """
         return self.first_part
 
     def get_synthesizers(self):
         """
-        Returns the synthesizers in the ensemble.
+        Returns the synthesizers in the song.
 
         Returns:
             dict: A dictionary of synthesizer names and their corresponding SynthWrapper instances.

@@ -4,19 +4,19 @@ import time
 # Add bindings directory to the Python path
 sys.path.insert(0, "./bindings")
 
-from random_note_example import RandomNoteEnsemble
+from random_note_example import RandomNoteSong
 import audio_engine
 
 # Create ControlParameters
 control_params = audio_engine.ControlParameters()
 
-# Initialize the RandomNoteEnsemble with ControlParameters and BPM
+# Initialize the RandomNoteSong with ControlParameters and BPM
 bpm = 120  # Beats per minute
-ensemble = RandomNoteEnsemble(control_params, bpm)
+song = RandomNoteSong(control_params, bpm)
 
 # Retrieve the synthesizers and register them with the audio engine
 engine = audio_engine.AudioEngine(control_params)
-synthesizers = ensemble.get_synthesizers()
+synthesizers = song.get_synthesizers()
 for synth_name, synth in synthesizers.items():
     engine.registerSynth(synth_name, synth)
 
@@ -24,7 +24,7 @@ for synth_name, synth in synthesizers.items():
 engine.start()
 
 # Retrieve the first part and its note generator
-current_part = ensemble.get_first_part()
+current_part = song.get_first_part()
 note_generator = current_part.get_note_generator()
 
 # GeneratorLoop
@@ -49,12 +49,15 @@ try:
         # Check if the part has ended and transition if necessary
         if note_generator.get_part_end():
             next_part_name = current_part.get_next_part()
-            if next_part_name is not None:
+            if next_part_name == "end":
+                print("Song has ended.")
+                break
+            elif next_part_name is not None:
                 print(f"Transitioning to part: {next_part_name}")
                 # Logic to transition to the next part can be implemented here
 
         loop_stop_time = time.time()
-        sleep_duration = ensemble.get_update_interval() - (loop_stop_time - loop_start_time)
+        sleep_duration = song.get_update_interval() - (loop_stop_time - loop_start_time)
 
         # Wait for the duration of the update interval before the next iteration
         if sleep_duration > 0:
