@@ -57,3 +57,17 @@ class StrangerNoteGenerator:
             NotImplementedError: If the method is not implemented in a subclass.
         """
         raise NotImplementedError("Subclasses must implement the `get_next_notes` method.")
+
+    def get_part_end(self):
+        """
+        Determine whether the current part of the music has ended and a transition
+        to the next part should be triggered.
+
+        Returns:
+            bool: True if the current part has ended and the next part should/could be played,
+                  False otherwise.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
+        raise NotImplementedError("Subclasses must implement the `get_part_end` method.")
