@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
             # Create an instance of the test generator
             control_params = None  # Placeholder, as ControlParameters is not used in this test
-            beats_per_bar = [3, 4, 1, 2]
+            beats_per_bar = [3, 5, 1, 2]
             note_value = 4
             subdivision = 16
             generator = TestNoteGenerator(control_params, beats_per_bar, note_value, subdivision)
@@ -135,10 +135,11 @@ if __name__ == "__main__":
                 (True, 1, 1, 0, 3, 4),  # On beat 1 of bar 1
                 (True, 2, 1, 0, 3, 4),  # On beat 2 of bar 1
                 (True, 3, 1, 0, 3, 4),  # On beat 3 of bar 1
-                (True, 1, 2, 0, 4, 4),  # On beat 1 of bar 2
-                (True, 2, 2, 0, 4, 4),  # On beat 2 of bar 2
-                (True, 3, 2, 0, 4, 4),  # On beat 3 of bar 2
-                (True, 4, 2, 0, 4, 4),  # On beat 4 of bar 2
+                (True, 1, 2, 0, 5, 4),  # On beat 1 of bar 2
+                (True, 2, 2, 0, 5, 4),  # On beat 2 of bar 2
+                (True, 3, 2, 0, 5, 4),  # On beat 3 of bar 2
+                (True, 4, 2, 0, 5, 4),  # On beat 4 of bar 2
+                (True, 5, 2, 0, 5, 4),  # On beat 5 of bar 2
                 (True, 1, 3, 0, 1, 4),  # On beat 1 of bar 3
                 (True, 1, 4, 0, 2, 4),  # On beat 1 of bar 4
                 (True, 2, 4, 0, 2, 4),  # On beat 2 of bar 4
