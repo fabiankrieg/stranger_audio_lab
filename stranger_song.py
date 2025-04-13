@@ -3,8 +3,8 @@ class StrangerSong:
     Base class for managing a song composed of synthesizers and musical parts.
 
     This class provides an interface for retrieving the first part of the song,
-    accessing the synthesizers in the song, and determining the update interval
-    for the note generation loop.
+    accessing the synthesizers in the song, determining the update interval,
+    and transitioning between parts.
 
     Attributes:
         _control_params (audio_engine.ControlParameters): An instance of ControlParameters
@@ -14,6 +14,7 @@ class StrangerSong:
         - get_first_part(): Returns the first part of the song as a StrangerPart instance.
         - get_synthesizers(): Returns a dictionary of synthesizer names and their corresponding SynthWrapper instances.
         - get_update_interval(): Returns the minimum note duration (update interval) in seconds.
+        - get_next_part(current_part_name): Returns the name of the next part based on the current part.
     """
 
     def __init__(self, control_params):
@@ -60,6 +61,21 @@ class StrangerSong:
             NotImplementedError: If the method is not implemented in a subclass.
         """
         raise NotImplementedError("Subclasses must implement the `get_update_interval` method.")
+
+    def get_next_part(self, current_part_name):
+        """
+        Determines the next part of the song based on the current part name.
+
+        Args:
+            current_part_name (str): The name of the current part.
+
+        Returns:
+            str or None: The name of the next part, or "end" to mark the end of the song.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a subclass.
+        """
+        raise NotImplementedError("Subclasses must implement the `get_next_part` method.")
 
 
 class StrangerBPMSong(StrangerSong):

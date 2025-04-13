@@ -58,13 +58,14 @@ try:
 
         # Check if the part has ended and transition if necessary
         if note_generator.get_part_end():
-            next_part_name = current_part.get_next_part()
+            next_part_name = song.get_next_part(current_part.get_part_name())
             if next_part_name == "end":
                 print("Song has ended.")
                 break
             elif next_part_name is not None:
                 print(f"Transitioning to part: {next_part_name}")
-                # Logic to transition to the next part can be implemented here
+                current_part = song.get_part_by_name(next_part_name)
+                note_generator = current_part.get_note_generator()
 
         loop_stop_time = time.time()
         sleep_duration = song.get_update_interval() - (loop_stop_time - loop_start_time)

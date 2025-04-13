@@ -62,14 +62,6 @@ class RandomNotePart(StrangerPart):
         self.synth_name = synth_name
         self.note_generator = RandomNoteGenerator(control_params, synth_name)
 
-    def get_next_part(self):
-        """
-        Always return None to replay the same part.
-
-        Returns:
-            None: Indicates the current part should be replayed.
-        """
-        return None
 
     def get_part_name(self):
         """
@@ -127,3 +119,12 @@ class RandomNoteSong(StrangerBPMSong):
             dict: A dictionary of synthesizer names and their corresponding SynthWrapper instances.
         """
         return self.synthesizers
+    
+    def get_next_part(self):
+        """
+        Always return None to replay the same part.
+
+        Returns:
+            None: Indicates the current part should be replayed.
+        """
+        return None
