@@ -4,7 +4,7 @@ import time
 # Add bindings directory to the Python path
 sys.path.insert(0, "./bindings")
 
-from random_note_example import RandomNoteSong
+from example_random_note import RandomNoteSong
 import audio_engine
 
 # Create ControlParameters
