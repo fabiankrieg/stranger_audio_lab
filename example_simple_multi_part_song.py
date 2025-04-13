@@ -100,7 +100,7 @@ class SimpleMultiPartSong(StrangerBPMSong):
     def get_synthesizers(self):
         return self._synthesizers
     
-    def get_next_part(self, current_part_name):
+    def get_next_part(self):
         # Generate new part
         self._current_part_index += 1
         print("Starting new part: " + str(self._current_part_index))

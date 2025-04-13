@@ -62,15 +62,13 @@ class StrangerSong:
         """
         raise NotImplementedError("Subclasses must implement the `get_update_interval` method.")
 
-    def get_next_part(self, current_part_name):
+    def get_next_part(self):
         """
         Determines the next part of the song based on the current part name.
 
-        Args:
-            current_part_name (str): The name of the current part.
-
         Returns:
-            str or None: The name of the next part, or "end" to mark the end of the song.
+            StrangerPart or None: The name of the next part, or the string "end" to mark the end of the song 
+            or None to repeat the part.
 
         Raises:
             NotImplementedError: If the method is not implemented in a subclass.
