@@ -110,48 +110,49 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
         """
         return False
 
+class TestStrangerNoteGeneratorBarBased(unittest.TestCase):
+    def test_beat_counting(self):
+        """
+        Test the beat counting functionality with a custom beat sequence.
+        """
+        class TestNoteGenerator(StrangerNoteGeneratorBarBased):
+            def _get_next_notes(self):
+                pass  # No-op for testing
+
+        # Create an instance of the test generator
+        control_params = None  # Placeholder, as ControlParameters is not used in this test
+        beats_per_bar = [3, 4, 1, 2]
+        note_value = 4
+        subdivision = 16
+        generator = TestNoteGenerator(control_params, beats_per_bar, note_value, subdivision)
+
+        # Expected results for each update
+        expected_results = [
+            (True, 1, 1, 0, 3, 4),  # On beat 1 of bar 1
+            (False, 1, 1, 0, 3, 4),  # Subdivision within beat 1
+            (True, 2, 1, 0, 3, 4),  # On beat 2 of bar 1
+            (True, 3, 1, 0, 3, 4),  # On beat 3 of bar 1
+            (True, 1, 2, 0, 4, 4),  # On beat 1 of bar 2
+            (True, 2, 2, 0, 4, 4),  # On beat 2 of bar 2
+            (True, 3, 2, 0, 4, 4),  # On beat 3 of bar 2
+            (True, 4, 2, 0, 4, 4),  # On beat 4 of bar 2
+            (True, 1, 3, 0, 1, 4),  # On beat 1 of bar 3
+            (True, 1, 4, 0, 2, 4),  # On beat 1 of bar 4
+            (True, 2, 4, 0, 2, 4),  # On beat 2 of bar 4
+            (True, 1, 1, 1, 3, 4),  # Back to bar 1, repetition 1
+        ]
+
+        # Run the generator and check results
+        total_beats = sum(beats_per_bar) + 1
+        total_subdivisions = total_beats * subdivision / 4
+        for expected in expected_results:
+            current_beat = generator.get_current_beat()
+            self.assertEqual(current_beat, expected)
+            generator._update_beat()
 
 # Unit test for StrangerNoteGeneratorBarBased
 if __name__ == "__main__":
     import unittest
-
-    class TestStrangerNoteGeneratorBarBased(unittest.TestCase):
-        def test_beat_counting(self):
-            """
-            Test the beat counting functionality with a custom beat sequence.
-            """
-            class TestNoteGenerator(StrangerNoteGeneratorBarBased):
-                def _get_next_notes(self):
-                    pass  # No-op for testing
-
-            # Create an instance of the test generator
-            control_params = None  # Placeholder, as ControlParameters is not used in this test
-            beats_per_bar = [3, 4, 1, 2]
-            note_value = 4
-            subdivision = 16
-            generator = TestNoteGenerator(control_params, beats_per_bar, note_value, subdivision)
-
-            # Expected results for each update
-            expected_results = [
-                (True, 1, 1, 0, 3, 4),  # On beat 1 of bar 1
-                (False, 1, 1, 0, 3, 4),  # Subdivision within beat 1
-                (True, 2, 1, 0, 3, 4),  # On beat 2 of bar 1
-                (True, 3, 1, 0, 3, 4),  # On beat 3 of bar 1
-                (True, 1, 2, 0, 4, 4),  # On beat 1 of bar 2
-                (True, 2, 2, 0, 4, 4),  # On beat 2 of bar 2
-                (True, 3, 2, 0, 4, 4),  # On beat 3 of bar 2
-                (True, 4, 2, 0, 4, 4),  # On beat 4 of bar 2
-                (True, 1, 3, 0, 1, 4),  # On beat 1 of bar 3
-                (True, 1, 4, 0, 2, 4),  # On beat 1 of bar 4
-                (True, 2, 4, 0, 2, 4),  # On beat 2 of bar 4
-                (True, 1, 1, 1, 3, 4),  # Back to bar 1, repetition 1
-            ]
-
-            # Run the generator and check results
-            for expected in expected_results:
-                current_beat = generator.get_current_beat()
-                self.assertEqual(current_beat, expected)
-                generator._update_beat()
 
     # Run the tests
     unittest.main()
