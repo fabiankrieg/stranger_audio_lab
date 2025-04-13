@@ -80,6 +80,9 @@ class SimplePart(StrangerPart):
 
     def get_note_generator(self):
         return self._note_generator
+    
+    def get_part_name(self):
+        return self._part_name
 
 
 class SimpleMultiPartSong(StrangerBPMSong):
