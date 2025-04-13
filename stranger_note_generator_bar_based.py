@@ -30,8 +30,8 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
         self._beats_per_bar = beats_per_bar
         self._note_value = note_value
         self._subdivision = subdivision
-        self._subdivision_counter = 0
-        self._beat_counter = 0
+        self._subdivision_counter = -1
+        self._beat_counter = -1
         self._bar_counter = 0
         self._repetition_counter = 0
         self._on_beat = True
@@ -86,8 +86,6 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
                   operations to be performed on synthesizers.
         """
         new_notes = self._get_next_notes()
-        self._update_beat()  # Update the beat after generating notes
-        # Example implementation: Always return an empty list for now
         return new_notes
 
     def _get_next_notes(self):
