@@ -36,6 +36,8 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
         self._repetition_counter = 0
         self._on_beat = True
 
+        self._subdivisions_per_repetition = sum(beats_per_bar) * subdivision // note_value
+
     def _update_beat(self):
         """
         Updates the beat, bar, and repetition counters based on the current state.
@@ -107,7 +109,7 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
         Returns:
             bool: False, indicating the current part does not end.
         """
-        return False
+        return (self._subdivision_counter + 1) % self._subdivisions_per_repetition == 0
 
 
 
@@ -145,8 +147,8 @@ if __name__ == "__main__":
                 (True, 2, 4, 0, 2, 4),  # On beat 2 of bar 4
                 (True, 1, 1, 1, 3, 4),  # Back to bar 1, repetition 1
             ]
-
             num_of_subdivisions_per_beat = subdivision // note_value
+            part_can_end_subdivision_index = sum(beats_per_bar) * num_of_subdivisions_per_beat - 1
 
             for index in range(len(expected_results) * num_of_subdivisions_per_beat):
                 # Call the method to update the beat
@@ -166,6 +168,10 @@ if __name__ == "__main__":
                 self.assertEqual(max_beat, expected[4])
                 self.assertEqual(max_bar, expected[5])
 
+                if index == part_can_end_subdivision_index:
+                    self.assertTrue(generator.get_part_can_end(), msg="index=" + str(index) + ", part_can_end_subdivision_index=" + str(part_can_end_subdivision_index))
+                else:
+                    self.assertFalse(generator.get_part_can_end(), msg="index=" + str(index) + ", part_can_end_subdivision_index=" + str(part_can_end_subdivision_index))
 
     
     # Run the tests
