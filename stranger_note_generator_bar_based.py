@@ -102,9 +102,12 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
         # Placeholder for actual note generation logic
         raise NotImplementedError("Subclasses must implement the `_get_next_notes` method.")
 
-    def get_part_end(self):
+    def get_part_can_end(self):
         """
-        Always return False as this generator does not trigger part transitions.
+        Returns whether the current part can end and a new one start.
+
+        As this is called after get_next_notes it will return true on the
+        last subdivision of the last beat of the last bar of the last repetition.
 
         Returns:
             bool: False, indicating the current part does not end.
