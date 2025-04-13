@@ -7,7 +7,7 @@ class StrangerSong:
     for the note generation loop.
 
     Attributes:
-        control_params (audio_engine.ControlParameters): An instance of ControlParameters
+        _control_params (audio_engine.ControlParameters): An instance of ControlParameters
             for managing and updating synthesizer parameters.
 
     Interface:
@@ -23,7 +23,7 @@ class StrangerSong:
         Args:
             control_params (audio_engine.ControlParameters): An instance of ControlParameters.
         """
-        self.control_params = control_params
+        self._control_params = control_params
 
     def get_first_part(self):
         """
@@ -67,8 +67,8 @@ class StrangerBPMSong(StrangerSong):
     Subclass of StrangerSong that calculates the update interval based on BPM and max division.
 
     Attributes:
-        bpm (float): Beats per minute for the song.
-        max_division (int): Maximum division for note duration (e.g., 16 for 16th notes).
+        _bpm (float): Beats per minute for the song.
+        _max_division (int): Maximum division for note duration (e.g., 16 for 16th notes).
     """
 
     def __init__(self, control_params, bpm, max_division):
@@ -81,8 +81,8 @@ class StrangerBPMSong(StrangerSong):
             max_division (int): Maximum division for note duration (e.g., 16 for 16th notes).
         """
         super().__init__(control_params)
-        self.bpm = bpm
-        self.max_division = max_division
+        self._bpm = bpm
+        self._max_division = max_division
 
     def get_update_interval(self):
         """
@@ -91,4 +91,4 @@ class StrangerBPMSong(StrangerSong):
         Returns:
             float: The minimum note duration in seconds.
         """
-        return 60 / self.bpm / (self.max_division / 4)
+        return 60 / self._bpm / (self._max_division / 4)

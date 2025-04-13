@@ -7,7 +7,7 @@ class StrangerNoteGenerator:
     the specific behavior of the note generation.
 
     Attributes:
-        control_params (audio_engine.ControlParameters): An instance of ControlParameters
+        _control_params (audio_engine.ControlParameters): An instance of ControlParameters
             for managing and updating synthesizer parameters.
 
     Interface:
@@ -58,7 +58,7 @@ class StrangerNoteGenerator:
         Args:
             control_params (audio_engine.ControlParameters): An instance of ControlParameters.
         """
-        self.control_params = control_params
+        self._control_params = control_params
 
     def get_next_notes(self):
         """
