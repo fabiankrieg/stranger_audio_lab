@@ -54,9 +54,6 @@ class SimplePart(StrangerPart):
         self._part_name = part_name
 
         self._scale = pick_random_scale(scale_list)
-        beats_per_bar = [4, 4, 4, 3]
-        note_value = 4
-
         # Generate a random note pattern for the part
         note_pattern = [ # play the same random melody on the first bars on each repetition
             [
@@ -68,21 +65,14 @@ class SimplePart(StrangerPart):
             [
                 (pick_random_scale(self._scale), random.uniform(0.3, 0.7),),
                 (pick_random_scale(self._scale), random.uniform(0.3, 0.7),),
-                (pick_random_scale(self._scale), random.uniform(0.3, 0.7),),
-                (pick_random_scale(self._scale), random.uniform(0.3, 0.7),),
-            ],
-            [
-                (pick_random_scale(self._scale), random.uniform(0.3, 0.7),),
-                (pick_random_scale(self._scale), random.uniform(0.3, 0.7),),
-                (pick_random_scale(self._scale), random.uniform(0.3, 0.7),),
-                (pick_random_scale(self._scale), random.uniform(0.3, 0.7),),
-            ],
-            [ # play random notes, different for each repetition, getting louder on last bar
-                ("random", 0.3,),
-                ("random", 0.5,),
                 ("random", 0.7,),
+                ("random", 1,),
             ]
         ]
+        beats_per_bar = []
+        for bar in note_pattern:
+            beats_per_bar.append(len(bar))
+        note_value = 4
 
         self._note_generator = NoteGeneratorPatternScaleBased(control_params, synth_name, note_pattern, self._scale, beats_per_bar, note_value, subdivision)
 
