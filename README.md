@@ -13,3 +13,14 @@ Best to download [VSCode](https://code.visualstudio.com/) and follow the [MSVC++
 Also, after installing VSCode and MSVC Build toos but before everything else - do not forget to start the Developer Command Prompt and start VSCode from that - otherwise it won't find your compiler and stuff.
 
 After all that is done Compile the C-Code and start the `main.py` to hear some first sounds :)
+
+
+## Dependencies
+
+This project uses the following open-source libraries via Git submodules:
+
+- [RTaudio](https://github.com/thestk/rtaudio) – MIT License
+- [PyBind11](https://github.com/pybind/pybind11) – BSD License
+- [Tonic](https://github.com/TonicAudio/Tonic) – Unlicense
+
+Please see the respective repositories for full license terms.
