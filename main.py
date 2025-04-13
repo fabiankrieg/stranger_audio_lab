@@ -5,6 +5,7 @@ import time
 sys.path.insert(0, "./bindings")
 
 from example_random_note import RandomNoteSong
+from example_simple_multi_part_song import SimpleMultiPartSong
 import audio_engine
 
 # Create ControlParameters
@@ -12,7 +13,8 @@ control_params = audio_engine.ControlParameters()
 
 # Initialize the RandomNoteSong with ControlParameters and BPM
 bpm = 120  # Beats per minute
-song = RandomNoteSong(control_params, bpm)
+# song = RandomNoteSong(control_params, bpm)
+song = SimpleMultiPartSong(control_params, bpm)
 
 # Retrieve the synthesizers and register them with the audio engine
 engine = audio_engine.AudioEngine(control_params)
