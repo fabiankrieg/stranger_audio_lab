@@ -1,33 +1,31 @@
 import sys
 import time
-import random
 
-sys.path.insert(0, "bindings")
+# Add bindings directory to the Python path
+sys.path.insert(0, "./bindings")
+
+from random_note_example import RandomNoteEnsemble
 import audio_engine
 
 # Create ControlParameters
 control_params = audio_engine.ControlParameters()
 
-# Initialize the audio engine with ControlParameters
+# Initialize the RandomNoteEnsemble with ControlParameters and BPM
+bpm = 120  # Beats per minute
+ensemble = RandomNoteEnsemble(control_params, bpm)
+
+# Retrieve the synthesizers and register them with the audio engine
 engine = audio_engine.AudioEngine(control_params)
-
-# Create and configure synthesizers
-square_synth = audio_engine.TonicSimpleADSRFilterSynth("SquareWave", 0.05, 0.1, 0.6, 0.4, 250.0, 1.0)
-saw_synth = audio_engine.TonicSimpleADSRFilterSynth("SawtoothWave", 0.05, 0.1, 0.6, 0.4, 250.0, 1.0)
-
-# Register synthesizers with the audio engine and link parameters
-engine.registerSynth("square_synth", square_synth)
-engine.registerSynth("saw_synth", saw_synth)
-control_params.linkParameter("square_synth", "pitchBend", "pitchbend")
-control_params.linkParameter("saw_synth", "pitchBend", "pitchbend")
+synthesizers = ensemble.get_synthesizers()
+for synth_name, synth in synthesizers.items():
+    engine.registerSynth(synth_name, synth)
 
 # Start audio playback
 engine.start()
 
-# Global BPM and note duration calculation
-global_bpm = 120  # Beats per minute
-max_division = 16  # Maximum division for note duration (e.g., 16th notes == 16 divisions)
-min_note_duration = 60 / global_bpm / (max_division / 4)  # Duration of the smallest note in seconds
+# Retrieve the first part and its note generator
+current_part = ensemble.get_first_part()
+note_generator = current_part.get_note_generator()
 
 # GeneratorLoop
 print("Starting GeneratorLoop...")
@@ -35,26 +33,34 @@ try:
     while True:
         loop_start_time = time.time()
 
-        # Generate random MIDI pitches for the synthesizers
-        square_pitch = random.randint(60, 72)  # Random pitch between C4 and C5
-        saw_pitch = random.randint(60, 72)
+        # Get the next set of notes from the note generator
+        notes = note_generator.get_next_notes()
 
-        # Stop notes
-        square_synth.stopNote()
-        saw_synth.stopNote()
+        # Process each note event
+        for note_event in notes:
+            for synth_name, event in note_event.items():
+                if event["event"] == "note_start":
+                    pitch = event["pitch"]
+                    amplitude = event["amplitude"]
+                    synthesizers[synth_name].startNote(pitch, amplitude)
+                elif event["event"] == "note_stop":
+                    synthesizers[synth_name].stopNote()
 
-        # Start notes
-        square_synth.startNote(square_pitch, 0.5)  # Start square_synth note
-        saw_synth.startNote(saw_pitch, 0.5)  # Start saw_synth note
+        # Check if the part has ended and transition if necessary
+        if note_generator.get_part_end():
+            next_part_name = current_part.get_next_part()
+            if next_part_name is not None:
+                print(f"Transitioning to part: {next_part_name}")
+                # Logic to transition to the next part can be implemented here
 
         loop_stop_time = time.time()
-        sleep_duration = min_note_duration - (loop_stop_time - loop_start_time)
+        sleep_duration = ensemble.get_update_interval() - (loop_stop_time - loop_start_time)
 
-        # Wait for the duration of the smallest note before the next iteration
+        # Wait for the duration of the update interval before the next iteration
         if sleep_duration > 0:
             time.sleep(sleep_duration)
         else:
-            print("Warning: Loop took longer than the note duration, it took " + str(loop_stop_time - loop_start_time) + " seconds.")
+            print("Warning: Loop took longer than the update interval.")
 
 except KeyboardInterrupt:
     print("Stopping GeneratorLoop...")
