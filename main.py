@@ -36,15 +36,25 @@ try:
         # Get the next set of notes from the note generator
         notes = note_generator.get_next_notes()
 
-        # Process each note event
+        # Separate note_end and note_start events
+        note_end_events = []
+        note_start_events = []
         for note_event in notes:
             for synth_name, event in note_event.items():
-                if event["event"] == "note_start":
-                    pitch = event["pitch"]
-                    amplitude = event["amplitude"]
-                    synthesizers[synth_name].startNote(pitch, amplitude)
-                elif event["event"] == "note_stop":
-                    synthesizers[synth_name].stopNote()
+                if event["event"] == "note_end":
+                    note_end_events.append((synth_name, event))
+                elif event["event"] == "note_start":
+                    note_start_events.append((synth_name, event))
+
+        # Process note_end events first
+        for synth_name, event in note_end_events:
+            synthesizers[synth_name].stopNote()
+
+        # Process note_start events
+        for synth_name, event in note_start_events:
+            pitch = event["pitch"]
+            amplitude = event["amplitude"]
+            synthesizers[synth_name].startNote(pitch, amplitude)
 
         # Check if the part has ended and transition if necessary
         if note_generator.get_part_end():
