@@ -65,6 +65,8 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
                 - int: `beat` indicating the current beat within the bar.
                 - int: `bar` indicating the current bar in the sequence.
                 - int: `repetition` indicating the current repetition of the bar sequence.
+                - int: `max_beat` indicating the last beat within the bar.
+                - int: `max_bar` indicating the last bar in the sequence.
         """
         return self._on_beat, self._beat_counter + 1, self._bar_counter + 1, self._repetition_counter
 
