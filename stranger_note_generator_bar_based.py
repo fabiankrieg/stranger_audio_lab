@@ -45,7 +45,7 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
         self._subdivision_counter += 1
 
         # Update on_beat
-        if  self._subdivision_counter // self._note_value == 0:
+        if self._subdivision_counter % self._note_value == 0:
             self._on_beat = True
             self._beat_counter += 1
         else:
@@ -85,6 +85,7 @@ class StrangerNoteGeneratorBarBased(StrangerNoteGenerator):
             list: A list of dictionaries, where each dictionary represents a set of
                   operations to be performed on synthesizers.
         """
+        self._update_beat()  # Update the beat
         new_notes = self._get_next_notes()
         return new_notes
 
