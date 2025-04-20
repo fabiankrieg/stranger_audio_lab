@@ -183,3 +183,7 @@ bindings
 extern/JUCE_dep
 
 .vscode
+
+# Data
+*.mid
+*.midi
