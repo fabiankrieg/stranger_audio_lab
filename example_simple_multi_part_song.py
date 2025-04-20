@@ -25,16 +25,28 @@ class NoteGeneratorPatternScaleBased(StrangerNoteGeneratorBarBased):
         self._scale = scale
         self._note_pattern = note_pattern
 
+        self._last_note = None
+
     def _get_next_notes(self):
         on_beat, beat_counter, bar_counter, repetition_counter, max_beat, max_bar = self.get_current_beat()
         if on_beat:
             pitch, amplitude = self._note_pattern[bar_counter - 1][beat_counter - 1]
             if pitch == "random":
                 pitch = pick_random_note_on_scale(self._scale)
+
+            if self._last_note is None:            
+                self._last_note = pitch
+                return [
+                    {self._synth_name: {"event": "note_start", "pitch": pitch, "amplitude": amplitude}},
+                ]
+
+            last_note = self._last_note
+            self._last_note = pitch
             return [
-                {self._synth_name: {"event": "note_stop"}},
+                {self._synth_name: {"event": "note_stop", "pitch": last_note}},
                 {self._synth_name: {"event": "note_start", "pitch": pitch, "amplitude": amplitude}},
             ]
+
         else:
             return []
 
