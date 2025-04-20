@@ -1,5 +1,7 @@
 import time
 import audio_engine
+from stranger_midi_recorder import StrangerMidiRecorder
+
 
 class StrangerPlayback:
     """
@@ -12,6 +14,7 @@ class StrangerPlayback:
         _current_part (StrangerPart): The current part of the song being played.
         _note_generator (StrangerNoteGenerator): The note generator for the current part.
         _is_playing (bool): Indicates whether playback is active.
+        _midi_recorder (StrangerMidiRecorder): The MIDI recorder for recording notes.
     """
 
     def __init__(self, song, control_params):
@@ -29,7 +32,11 @@ class StrangerPlayback:
         self._note_generator = None
         self._is_playing = False
 
-        # Register synthesizers with the audio engine
+        # Initialize MIDI recorder
+        bpm = 60 / song.get_update_interval()  # Convert update interval to BPM
+        self._midi_recorder = StrangerMidiRecorder(bpm)
+
+        # Register synthesizers with the audio engine and assign MIDI channels
         for synth_name, synth in self._synthesizers.items():
             self._engine.registerSynth(synth_name, synth)
 
@@ -74,7 +81,10 @@ class StrangerPlayback:
                 pitch = event["pitch"]
                 amplitude = event["amplitude"]
                 self._synthesizers[synth_name].startNote(pitch, amplitude)
-
+            
+            # Record MIDI events
+            self._midi_recorder.record_midi(notes)
+            
             # Check if the part has ended and transition if necessary
             if self._note_generator.get_part_end():
                 next_part = self._song.get_next_part()
@@ -104,3 +114,6 @@ class StrangerPlayback:
             self._is_playing = False
             self._engine.stop()
             print("Playback stopped.")
+
+            # Save the MIDI file
+            self._midi_recorder.save(self._song.__class__.__name__)
