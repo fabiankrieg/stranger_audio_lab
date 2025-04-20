@@ -13,37 +13,36 @@ class StrangerNoteGenerator:
     Interface:
         - get_next_notes(): Returns a list of dictionaries, where each dictionary
           represents a set of operations to be performed on synthesizers.
-        - get_part_end(): Returns a boolean indicating whether the current part has ended
+        - get_part_can_end(): Returns a boolean indicating whether the current part has ended
           and a transition to the next part should be triggered.
 
     Note Format:
         Each entry in the list returned by `get_next_notes` is a dictionary with the
         following structure:
         {
-            "synth_name": {
-                "event": "note_start" or "note_end",
-                "pitch": <MIDI pitch> (required for "note_start"),
-                "amplitude": <amplitude> (required for "note_start")
-            }
+            "synth_name": Name of the synthesizer (str),
+            "event": "note_start" or "note_end",
+            "pitch": <MIDI pitch> (required for "note_start"),
+            "amplitude": <amplitude> (required for "note_start"),
+            "note_length": number of subdivisions for the note to play,
         }
 
     Example:
         [
             {
-                "square_synth": {
-                    "event": "note_start",
-                    "pitch": 64,
-                    "amplitude": 0.5
-                },
-                "saw_synth": {
-                    "event": "note_end"
-                }
+                "synth_name": "square_synth",
+                "event": "note_start",
+                "pitch": 64,
+                "amplitude": 0.5,
+                "note_length": 4,
             },
             {
-                "square_synth": {
-                    "event": "note_end"
-                }
-            }
+                "synth_name": "saw_synth",
+                "event": "note_start",
+                "pitch": 32,
+                "amplitude": 0.5,
+                "note_length": 2,
+            },
         ]
 
     Subclassing:

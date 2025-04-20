@@ -28,7 +28,7 @@ class StrangerMidiRecorder:
         self._midi_file = MidiFile(ticks_per_beat=self._ticks_per_beat)
         self._midi_track = MidiTrack()
         self._midi_file.tracks.append(self._midi_track)
-        self._last_event_time = None
+        self._last_event_time = None  # Initialize to None to handle the first event
         self._synth_channels = {}
         self._next_channel = 0  # MIDI channels range from 0 to 15
         self._tempo = int(60_000_000 / bpm)  # Convert BPM to microseconds per beat
@@ -53,42 +53,35 @@ class StrangerMidiRecorder:
             self._next_channel += 1
         return self._synth_channels[synth_name]
 
-    def record_midi(self, notes):
+    def record_note_on(self, synth_name, pitch, amplitude):
         """
-        Records MIDI events for the given notes.
+        Records a note-on event in the MIDI track.
 
         Args:
-            notes (list): A list of note events to record.
+            synth_name (str): The name of the synthesizer.
+            pitch (int): The MIDI pitch of the note.
+            amplitude (float): The amplitude of the note (converted to velocity).
         """
-        current_time = time.time()
-        if self._last_event_time is None:
-            self._last_event_time = current_time
-        elapsed_time = current_time - self._last_event_time
+        elapsed_time = self._get_elapsed_time()
         midi_time = self._calculate_midi_time(elapsed_time)
-        self._last_event_time = current_time
 
-        # Separate note_stop and note_start events
-        note_stop_events = []
-        note_start_events = []
-        for note_event in notes:
-            for synth_name, event in note_event.items():
-                if event["event"] == "note_stop":
-                    note_stop_events.append((synth_name, event))
-                elif event["event"] == "note_start":
-                    note_start_events.append((synth_name, event))
+        channel = self._get_channel(synth_name)
+        velocity = int(amplitude * 127)  # Convert amplitude to MIDI velocity
+        self._midi_track.append(Message('note_on', note=pitch, velocity=velocity, time=midi_time, channel=channel))
 
-        # Record note_stop events first
-        for synth_name, event in note_stop_events:
-            channel = self._get_channel(synth_name)
-            self._midi_track.append(Message('note_off', note=event["pitch"], velocity=0, time=midi_time, channel=channel))
-            midi_time = 0  # Reset time for subsequent events in the same loop
+    def record_note_off(self, synth_name, pitch):
+        """
+        Records a note-off event in the MIDI track.
 
-        # Record note_start events
-        for synth_name, event in note_start_events:
-            channel = self._get_channel(synth_name)
-            velocity = int(event["amplitude"] * 127)  # Convert amplitude to MIDI velocity
-            self._midi_track.append(Message('note_on', note=event["pitch"], velocity=velocity, time=midi_time, channel=channel))
-            midi_time = 0  # Reset time for subsequent events in the same loop
+        Args:
+            synth_name (str): The name of the synthesizer.
+            pitch (int): The MIDI pitch of the note.
+        """
+        elapsed_time = self._get_elapsed_time()
+        midi_time = self._calculate_midi_time(elapsed_time)
+
+        channel = self._get_channel(synth_name)
+        self._midi_track.append(Message('note_off', note=pitch, velocity=0, time=midi_time, channel=channel))
 
     def save(self, class_name):
         """
@@ -101,6 +94,21 @@ class StrangerMidiRecorder:
         filename = f"{class_name}_{timestamp}.mid"
         self._midi_file.save(filename)
         print(f"MIDI file saved as {filename}.")
+
+    def _get_elapsed_time(self):
+        """
+        Calculates the elapsed time since the last event.
+
+        Returns:
+            float: The elapsed time in seconds.
+        """
+        current_time = time.time()
+        if self._last_event_time is None:
+            self._last_event_time = current_time
+            return 0  # First event has no delay
+        elapsed_time = current_time - self._last_event_time
+        self._last_event_time = current_time
+        return elapsed_time
 
     def _calculate_midi_time(self, elapsed_time):
         """

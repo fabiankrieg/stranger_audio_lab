@@ -5,7 +5,7 @@ from stranger_midi_recorder import StrangerMidiRecorder
 
 class StrangerPlayback:
     """
-    A class to handle the playback of a song.
+    A class to handle the playback of a song and record notes into a MIDI file.
 
     Attributes:
         _song (StrangerSong): The song to be played.
@@ -36,13 +36,13 @@ class StrangerPlayback:
         bpm = 60 / song.get_update_interval()  # Convert update interval to BPM
         self._midi_recorder = StrangerMidiRecorder(bpm)
 
-        # Register synthesizers with the audio engine and assign MIDI channels
+        # Register synthesizers with the audio engine
         for synth_name, synth in self._synthesizers.items():
             self._engine.registerSynth(synth_name, synth)
 
     def __del__(self):
         """
-        Ensures the playback is stopped when the object is destroyed.
+        Ensures the playback is stopped and the MIDI file is saved when the object is destroyed.
         """
         self.stop_playback()
 
@@ -56,35 +56,40 @@ class StrangerPlayback:
         self._is_playing = True
 
         print("Starting playback...")
+        future_note_off_events = []
+
         while self._is_playing:
             loop_start_time = time.time()
+
+            # Process future note off events
+            for event in future_note_off_events[:]:
+                event["remaining_subdivisions"] -= 1
+                if event["remaining_subdivisions"] <= 0:
+                    self._synthesizers[event["synth_name"]].stopNote()
+                    self._midi_recorder.record_note_off(event["synth_name"], event["pitch"])
+                    future_note_off_events.remove(event)
 
             # Get the next set of notes from the note generator
             notes = self._note_generator.get_next_notes()
 
-            # Separate note_end and note_start events
-            note_end_events = []
-            note_start_events = []
-            for note_event in notes:
-                for synth_name, event in note_event.items():
-                    if event["event"] == "note_end":
-                        note_end_events.append((synth_name, event))
-                    elif event["event"] == "note_start":
-                        note_start_events.append((synth_name, event))
-
-            # Process note_end events first
-            for synth_name, event in note_end_events:
-                self._synthesizers[synth_name].stopNote()
-
             # Process note_start events
-            for synth_name, event in note_start_events:
-                pitch = event["pitch"]
-                amplitude = event["amplitude"]
+            for note_event in notes:
+                synth_name = note_event["synth_name"]
+                pitch = note_event["pitch"]
+                amplitude = note_event["amplitude"]
+                note_length = note_event["note_length"]
+
+                # Start the note
                 self._synthesizers[synth_name].startNote(pitch, amplitude)
-            
-            # Record MIDI events
-            self._midi_recorder.record_midi(notes)
-            
+                self._midi_recorder.record_note_on(synth_name, pitch, amplitude)
+
+                # Schedule the note off event
+                future_note_off_events.append({
+                    "synth_name": synth_name,
+                    "pitch": pitch,
+                    "remaining_subdivisions": note_length,
+                })
+
             # Check if the part has ended and transition if necessary
             if self._note_generator.get_part_end():
                 next_part = self._song.get_next_part()
@@ -108,7 +113,7 @@ class StrangerPlayback:
 
     def stop_playback(self):
         """
-        Stops the playback of the song.
+        Stops the playback of the song and saves the MIDI file.
         """
         if self._is_playing:
             self._is_playing = False
