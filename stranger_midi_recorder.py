@@ -1,5 +1,5 @@
 from datetime import datetime
-from mido import Message, MidiFile, MidiTrack, MetaMessage
+from mido import Message, MidiFile, MidiTrack, MetaMessage, second2tick
 import time
 
 
@@ -13,6 +13,8 @@ class StrangerMidiRecorder:
         _last_event_time (float): The timestamp of the last MIDI event.
         _synth_channels (dict): A mapping of synthesizer names to unique MIDI channels.
         _next_channel (int): The next available MIDI channel.
+        _ticks_per_beat (int): The number of ticks per beat in the MIDI file.
+        _tempo (int): The tempo in microseconds per beat.
     """
 
     def __init__(self, bpm):
@@ -22,16 +24,17 @@ class StrangerMidiRecorder:
         Args:
             bpm (float): The beats per minute of the song.
         """
-        self._midi_file = MidiFile()
+        self._ticks_per_beat = 480  # Standard ticks per beat for compatibility with most players
+        self._midi_file = MidiFile(ticks_per_beat=self._ticks_per_beat)
         self._midi_track = MidiTrack()
         self._midi_file.tracks.append(self._midi_track)
         self._last_event_time = None
         self._synth_channels = {}
         self._next_channel = 0  # MIDI channels range from 0 to 15
+        self._tempo = int(60_000_000 / bpm)  # Convert BPM to microseconds per beat
 
-        # Set the tempo in the MIDI file based on the song's BPM
-        microseconds_per_beat = int(60_000_000 / bpm)
-        self._midi_track.append(MetaMessage('set_tempo', tempo=microseconds_per_beat))
+        # Set the tempo in the MIDI file
+        self._midi_track.append(MetaMessage('set_tempo', tempo=self._tempo))
 
     def _get_channel(self, synth_name):
         """
@@ -101,7 +104,7 @@ class StrangerMidiRecorder:
 
     def _calculate_midi_time(self, elapsed_time):
         """
-        Converts elapsed time in seconds to MIDI ticks.
+        Converts elapsed time in seconds to MIDI ticks using mido.second2tick.
 
         Args:
             elapsed_time (float): The elapsed time in seconds.
@@ -109,4 +112,4 @@ class StrangerMidiRecorder:
         Returns:
             int: The elapsed time in MIDI ticks.
         """
-        return int(elapsed_time * 480)  # Convert elapsed time to ticks (assuming 480 ticks per beat)
+        return int(second2tick(elapsed_time, self._ticks_per_beat, self._tempo))
