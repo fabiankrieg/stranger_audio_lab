@@ -102,15 +102,6 @@ class RandomNoteSong(StrangerBPMSong):
         }
         self.first_part = RandomNotePart(control_params, self.synth_name)
 
-    def get_first_part(self):
-        """
-        Returns the first part of the song.
-
-        Returns:
-            RandomNotePart: The first part of the song.
-        """
-        return self.first_part
-
     def get_synthesizers(self):
         """
         Returns the synthesizers in the song.
@@ -120,11 +111,11 @@ class RandomNoteSong(StrangerBPMSong):
         """
         return self.synthesizers
     
-    def get_next_part(self):
+    def _get_next_part(self):
         """
         Always return None to replay the same part.
 
         Returns:
             None: Indicates the current part should be replayed.
         """
-        return None
+        return self.first_part

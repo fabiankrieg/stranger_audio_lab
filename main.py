@@ -26,7 +26,7 @@ for synth_name, synth in synthesizers.items():
 engine.start()
 
 # Retrieve the first part and its note generator
-current_part = song.get_first_part()
+current_part = song.get_next_part()
 note_generator = current_part.get_note_generator()
 
 # GeneratorLoop

@@ -2,16 +2,14 @@ class StrangerSong:
     """
     Base class for managing a song composed of synthesizers and musical parts.
 
-    This class provides an interface for retrieving the first part of the song,
-    accessing the synthesizers in the song, determining the update interval,
-    and transitioning between parts.
+    This class provides an interface for transitioning between parts, managing synthesizers,
+    and determining the update interval.
 
     Attributes:
         _control_params (audio_engine.ControlParameters): An instance of ControlParameters
             for managing and updating synthesizer parameters.
-
+        
     Interface:
-        - get_first_part(): Returns the first part of the song as a StrangerPart instance.
         - get_synthesizers(): Returns a dictionary of synthesizer names and their corresponding SynthWrapper instances.
         - get_update_interval(): Returns the minimum note duration (update interval) in seconds.
         - get_next_part(current_part_name): Returns the name of the next part based on the current part.
@@ -25,18 +23,7 @@ class StrangerSong:
             control_params (audio_engine.ControlParameters): An instance of ControlParameters.
         """
         self._control_params = control_params
-
-    def get_first_part(self):
-        """
-        Returns the first part of the song.
-
-        Returns:
-            StrangerPart: An instance of the first part of the song.
-
-        Raises:
-            NotImplementedError: If the method is not implemented in a subclass.
-        """
-        raise NotImplementedError("Subclasses must implement the `get_first_part` method.")
+        self._current_part_index = 0
 
     def get_synthesizers(self):
         """
@@ -64,16 +51,36 @@ class StrangerSong:
 
     def get_next_part(self):
         """
-        Determines the next part of the song based on the current part name.
+        Determines the next part of the song by incrementing the part counter and calling the subclass implementation.
 
         Returns:
-            StrangerPart or None: The name of the next part, or the string "end" to mark the end of the song 
-            or None to repeat the part.
+            StrangerPart or None: The next part of the song, or "end" to mark the end of the song,
+            or None to repeat the current part.
+        """
+        self._current_part_index += 1
+        return self._get_next_part()
+    
+    def get_current_part_index(self):
+        """
+        Returns the current part index.
+
+        Returns:
+            int: The current part index.
+        """
+        return self._current_part_index
+
+    def _get_next_part(self):
+        """
+        Private virtual function to be implemented by subclasses to determine the next part.
+
+        Returns:
+            StrangerPart or None: The next part of the song, or "end" to mark the end of the song,
+            or None to repeat the current part.
 
         Raises:
             NotImplementedError: If the method is not implemented in a subclass.
         """
-        raise NotImplementedError("Subclasses must implement the `get_next_part` method.")
+        raise NotImplementedError("Subclasses must implement the `_get_next_part` method.")
 
 
 class StrangerBPMSong(StrangerSong):
