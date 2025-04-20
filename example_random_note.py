@@ -20,6 +20,7 @@ class RandomNoteGenerator(StrangerNoteGenerator):
         """
         super().__init__(control_params)
         self.synth_name = synth_name
+        self._last_note = None
 
     def get_next_notes(self):
         """
@@ -30,8 +31,17 @@ class RandomNoteGenerator(StrangerNoteGenerator):
         """
         pitch = random.randint(60, 72)  # Random pitch between C4 and C5
         amplitude = 0.5  # Fixed amplitude
+
+        if self._last_note is None:            
+            self._last_note = pitch
+            return [
+                {self.synth_name: {"event": "note_start", "pitch": pitch, "amplitude": amplitude}},
+            ]
+
+        last_note = self._last_note
+        self._last_note = pitch
         return [
-            {self.synth_name: {"event": "note_stop"}},
+            {self.synth_name: {"event": "note_stop", "pitch": last_note}},
             {self.synth_name: {"event": "note_start", "pitch": pitch, "amplitude": amplitude}},
         ]
 
