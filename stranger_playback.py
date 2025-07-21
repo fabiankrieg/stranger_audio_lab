@@ -1,11 +1,12 @@
 import time
+import threading
 import audio_engine
 from stranger_midi_recorder import StrangerMidiRecorder
 
 
 class StrangerPlayback:
     """
-    A class to handle the playback of a song and record notes into a MIDI file.
+    A class to handle the playback of a song and record notes into a MIDI file, using an internal thread.
 
     Attributes:
         _song (StrangerSong): The song to be played.
@@ -31,6 +32,7 @@ class StrangerPlayback:
         self._current_part = None
         self._note_generator = None
         self._is_playing = False
+        self._thread = None
 
         # Initialize MIDI recorder
         bpm = 60 / song.get_update_interval()  # Convert update interval to BPM
@@ -44,11 +46,11 @@ class StrangerPlayback:
         """
         Ensures the playback is stopped and the MIDI file is saved when the object is destroyed.
         """
-        self.stop_playback()
+        self.stop()
 
-    def start_playback(self):
+    def _playback_loop(self):
         """
-        Starts the playback of the song.
+        The internal playback loop that runs in a separate thread.
         """
         self._engine.start()
         self._current_part = self._song.get_next_part()
@@ -95,7 +97,7 @@ class StrangerPlayback:
                 next_part = self._song.get_next_part()
                 if next_part == "end":
                     print("Song has ended.")
-                    self.stop_playback()
+                    self.stop()
                     break
                 elif next_part is not None:  # Repeat current part on None
                     print(f"Transitioning to part: {next_part.get_part_name()}")
@@ -111,9 +113,17 @@ class StrangerPlayback:
             else:
                 print("Warning: Loop took longer than the update interval.")
 
-    def stop_playback(self):
+    def start(self):
         """
-        Stops the playback of the song and saves the MIDI file.
+        Starts playback in a separate thread.
+        """
+        if self._thread is None or not self._thread.is_alive():
+            self._thread = threading.Thread(target=self._playback_loop)
+            self._thread.start()
+
+    def stop(self):
+        """
+        Stops playback and saves the MIDI file.
         """
         if self._is_playing:
             self._is_playing = False
@@ -122,3 +132,5 @@ class StrangerPlayback:
 
             # Save the MIDI file
             self._midi_recorder.save(self._song.__class__.__name__)
+        if self._thread is not None and self._thread.is_alive():
+            self._thread.join()
