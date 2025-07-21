@@ -1,4 +1,5 @@
 import sys
+from time import sleep
 
 # Add bindings directory to the Python path
 sys.path.insert(0, "./bindings")
@@ -6,7 +7,6 @@ sys.path.insert(0, "./bindings")
 from example_simple_multi_part_song import SimpleMultiPartSong
 from stranger_playback import StrangerPlayback
 import audio_engine
-from time import sleep
 
 # Create ControlParameters
 control_params = audio_engine.ControlParameters()
@@ -23,15 +23,16 @@ for synth_name, synth in synths.items():
 playback = StrangerPlayback(song, control_params)
 
 current_pitch_bend = 0
-# Start playback
 try:
-    control_params.updateParameter("pitchBend", current_pitch_bend)
-    current_pitch_bend += 1
-    if current_pitch_bend > 127:
-        current_pitch_bend = 0
-    print(f"Current pitch bend: {current_pitch_bend}")
-    playback.start_playback()
+    playback.start()
+    while True:
+        control_params.updateParameter("pitchBend", current_pitch_bend)
+        current_pitch_bend += 0.5
+        if current_pitch_bend > 127:
+            current_pitch_bend = 0
+        print(f"Current pitch bend: {current_pitch_bend}")
+        sleep(0.01)
 except KeyboardInterrupt:
     print("Playback interrupted by user.")
-    playback.stop_playback()
+    playback.stop()
 
