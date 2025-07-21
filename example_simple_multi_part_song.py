@@ -31,10 +31,16 @@ class NoteGeneratorPatternScaleBased(StrangerNoteGeneratorBarBased):
             pitch, amplitude = self._note_pattern[bar_counter - 1][beat_counter - 1]
             if pitch == "random":
                 pitch = pick_random_note_on_scale(self._scale)
+
             return [
-                {self._synth_name: {"event": "note_stop"}},
-                {self._synth_name: {"event": "note_start", "pitch": pitch, "amplitude": amplitude}},
+                {
+                    "synth_name": self._synth_name,
+                    "event": "note_start", 
+                    "pitch": pitch, 
+                    "amplitude": amplitude,
+                    "note_length": self._subdivision,},
             ]
+
         else:
             return []
 
@@ -96,15 +102,20 @@ class SimpleMultiPartSong(StrangerBPMSong):
 
         self._current_part_index = 0
 
-    def get_first_part(self):
-        # Generate new part
-        return SimplePart(self._control_params, self._synth_name, "SimplePart" + str(self._current_part_index), self._max_division)
-
     def get_synthesizers(self):
         return self._synthesizers
     
-    def get_next_part(self):
-        # Generate new part
-        self._current_part_index += 1
-        print("Starting new part: " + str(self._current_part_index))
-        return SimplePart(self._control_params, self._synth_name, "SimplePart" + str(self._current_part_index), self._max_division)
+    def _get_next_part(self):
+        """
+        Generates the next part of the song.
+
+        Returns:
+            SimplePart: The next part of the song.
+        """
+        print(f"Starting new part: {self._current_part_index}")
+        return SimplePart(
+            self._control_params,
+            self._synth_name,
+            f"SimplePart{self._current_part_index}",
+            self._max_division,
+        )

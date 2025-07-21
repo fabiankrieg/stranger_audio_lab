@@ -19,7 +19,8 @@ class RandomNoteGenerator(StrangerNoteGenerator):
             synth_name (str): The name of the synthesizer to generate notes for.
         """
         super().__init__(control_params)
-        self.synth_name = synth_name
+        self._synth_name = synth_name
+        self._last_note = None
 
     def get_next_notes(self):
         """
@@ -30,9 +31,14 @@ class RandomNoteGenerator(StrangerNoteGenerator):
         """
         pitch = random.randint(60, 72)  # Random pitch between C4 and C5
         amplitude = 0.5  # Fixed amplitude
+
         return [
-            {self.synth_name: {"event": "note_stop"}},
-            {self.synth_name: {"event": "note_start", "pitch": pitch, "amplitude": amplitude}},
+            {
+                "synth_name": self._synth_name,
+                "event": "note_start", 
+                "pitch": pitch, 
+                "amplitude": amplitude,
+                "note_length": 4,},
         ]
 
     def get_part_end(self):
@@ -102,15 +108,6 @@ class RandomNoteSong(StrangerBPMSong):
         }
         self.first_part = RandomNotePart(control_params, self.synth_name)
 
-    def get_first_part(self):
-        """
-        Returns the first part of the song.
-
-        Returns:
-            RandomNotePart: The first part of the song.
-        """
-        return self.first_part
-
     def get_synthesizers(self):
         """
         Returns the synthesizers in the song.
@@ -120,11 +117,11 @@ class RandomNoteSong(StrangerBPMSong):
         """
         return self.synthesizers
     
-    def get_next_part(self):
+    def _get_next_part(self):
         """
         Always return None to replay the same part.
 
         Returns:
             None: Indicates the current part should be replayed.
         """
-        return None
+        return self.first_part
